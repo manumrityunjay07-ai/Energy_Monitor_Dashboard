@@ -63,6 +63,8 @@ const UI = {
   // Chart & table
   hourlyTableBody:  $('hourly-table-body'),
   noActualNote:     $('no-actual-note'),
+  historyTableBody: $('history-table-body'),
+  suggestionsList:  $('suggestions-list'),
 };
 
 /* ══════════════════════════════════════════════════════════════════
@@ -561,6 +563,59 @@ function renderTable(hourlyRows) {
   }
 }
 
+function renderHistory(aiRows) {
+  const rows = [...(aiRows || [])].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 14);
+  UI.historyTableBody.textContent = '';
+  for (const row of rows) {
+    const tr = document.createElement('tr');
+    [row.date || '—', row.status || '—', fmt(row.actual_kwh) ?? 'Pending', fmt(row.prediction_kwh) ?? '—', fmt(row.prediction_error_kwh) ?? '—']
+      .forEach((value, index) => {
+        const td = document.createElement('td');
+        td.textContent = value;
+        if (index === 1) td.className = String(value).toLowerCase() === 'anomaly' ? 'td-error' : 'td-actual';
+        tr.appendChild(td);
+      });
+    UI.historyTableBody.appendChild(tr);
+  }
+  if (!rows.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 5;
+    td.textContent = 'No completed daily records yet.';
+    tr.appendChild(td);
+    UI.historyTableBody.appendChild(tr);
+  }
+}
+
+function renderSuggestions(aiRows, hourlyRows) {
+  const list = UI.suggestionsList;
+  list.textContent = '';
+  const suggestions = [];
+  const completed = (aiRows || []).filter(row => toFloat(row.actual_kwh) !== null);
+  const latest = completed[completed.length - 1];
+  if (!completed.length) {
+    suggestions.push('Keep the collector running until more complete daily records are available.');
+  } else {
+    const errors = completed.map(row => toFloat(row.prediction_error_kwh)).filter(v => v !== null);
+    if (errors.length) {
+      const mean = errors.reduce((sum, value) => sum + value, 0) / errors.length;
+      suggestions.push(mean > 0 ? `Recent forecasts are underestimating by about ${mean.toFixed(2)} kWh on average.`
+        : `Recent forecasts are overestimating by about ${Math.abs(mean).toFixed(2)} kWh on average.`);
+    }
+    if (latest?.status?.toLowerCase() === 'anomaly') suggestions.push(`Review ${latest.date}: the daily profile was flagged as anomalous.`);
+    else suggestions.push('The latest completed daily profile is within the learned normal range.');
+  }
+  const actuals = (hourlyRows || []).map(row => ({ hour: Number(row.hour), actual: toFloat(row.actual_kwh) }))
+    .filter(row => row.actual !== null).sort((a, b) => b.actual - a.actual);
+  if (actuals.length) suggestions.push(`Highest completed-hour consumption is around ${hourLabel(actuals[0].hour)} (${actuals[0].actual.toFixed(2)} kWh).`);
+  suggestions.push('Use the hourly table to compare completed hours and investigate repeated large errors.');
+  for (const text of suggestions) {
+    const li = document.createElement('li');
+    li.textContent = text;
+    list.appendChild(li);
+  }
+}
+
 /* ══════════════════════════════════════════════════════════════════
    UI STATE HELPERS
 ══════════════════════════════════════════════════════════════════ */
@@ -609,6 +664,8 @@ async function refresh() {
     renderAnomalyStrip(latestAI);
     renderChart(hourlyToday);
     renderTable(hourlyToday);
+    renderHistory(aiRows);
+    renderSuggestions(aiRows, hourlyToday);
 
     showContent();
   } catch (err) {

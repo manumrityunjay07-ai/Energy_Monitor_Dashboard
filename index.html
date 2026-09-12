@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="history-suggestions.css" />
 </head>
 <body>
 
@@ -192,6 +193,29 @@
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section class="history-grid" aria-label="Historical records and suggestions">
+        <section class="card table-section" aria-label="Previous daily records">
+          <div class="table-section__header">
+            <h2 class="section-title">Previous Daily Records</h2>
+            <span class="section-hint">Latest completed days</span>
+          </div>
+          <div class="table-wrap" role="region" aria-label="Previous daily records table" tabindex="0">
+            <table aria-live="polite">
+              <thead><tr><th>Date</th><th>Status</th><th>Actual kWh</th><th>Predicted kWh</th><th>Error kWh</th></tr></thead>
+              <tbody id="history-table-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card suggestions-card" aria-label="Automatic suggestions">
+          <div class="table-section__header">
+            <h2 class="section-title">Automatic Suggestions</h2>
+            <span class="section-hint">Based on recent data</span>
+          </div>
+          <ul class="suggestions-list" id="suggestions-list" aria-live="polite"></ul>
+        </section>
       </section>
 
     </main>
