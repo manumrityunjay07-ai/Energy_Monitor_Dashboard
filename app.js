@@ -256,6 +256,34 @@ function getHourlyForDate(hourlyRows, targetDate) {
   return hourlyRows.filter(r => r.date === latest);
 }
 
+function currentISTParts() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: CONFIG.timezone,
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false,
+  }).formatToParts(new Date());
+  const value = name => parts.find(p => p.type === name)?.value;
+  return { date: `${value('year')}-${value('month')}-${value('day')}`, hour: Number(value('hour')) };
+}
+
+function mergeLiveActuals(hourlyRows, stateData) {
+  const rows = hourlyRows.map(row => ({ ...row }));
+  const current = currentISTParts();
+  const profile = stateData?.profiles?.[current.date];
+  if (!profile) return rows;
+
+  const rowsByHour = new Map(rows.map(row => [Number(row.hour), row]));
+  for (let h = 0; h < current.hour; h++) {
+    const actual = toFloat(profile[String(h)]);
+    const row = rowsByHour.get(h);
+    if (!row || actual === null) continue;
+    // Only completed hours are safe to expose; ignore current/future placeholders.
+    row.actual_kwh = String(actual);
+    const predicted = toFloat(row.predicted_kwh);
+    if (predicted !== null) row.error_kwh = String(actual - predicted);
+  }
+  return rows;
+}
+
 /* ══════════════════════════════════════════════════════════════════
    RENDER — KPI CARDS
 ══════════════════════════════════════════════════════════════════ */
@@ -568,11 +596,11 @@ function showContent() {
 async function refresh() {
   showLoading();
   try {
-    const { aiRows, hourlyRows } = await loadAllData();
+    const { aiRows, hourlyRows, stateData } = await loadAllData();
 
     const latestAI    = getLatestAiRow(aiRows);
     const targetDate  = latestAI ? latestAI.date : null;
-    const hourlyToday = getHourlyForDate(hourlyRows, targetDate);
+    const hourlyToday = mergeLiveActuals(getHourlyForDate(hourlyRows, targetDate), stateData);
 
     renderKPI(latestAI);
     renderAnomalyStrip(latestAI);
