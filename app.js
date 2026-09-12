@@ -526,7 +526,10 @@ function renderTable(hourlyRows) {
   });
 
   const hasAny = Object.values(hourMap).some(v => v.actual !== null);
-  UI.noActualNote.classList.toggle('hidden', hasAny);
+  UI.noActualNote.classList.remove('hidden');
+  UI.noActualNote.lastChild.textContent = hasAny
+    ? 'Actual values are shown for completed hours; final daily results are confirmed after the 24-hour cycle.'
+    : 'Actual values are not yet available for this period';
 
   const tbody = UI.hourlyTableBody;
   tbody.textContent = ''; // safe clear
