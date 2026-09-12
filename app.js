@@ -42,6 +42,7 @@ const UI = {
 
   // KPI values
   kpiPredicted:     $('kpi-predicted'),
+  predictionRange:  $('prediction-range'),
   kpiActual:        $('kpi-actual'),
   kpiActualUnit:    $('kpi-actual-unit'),
   kpiError:         $('kpi-error'),
@@ -306,6 +307,9 @@ function renderKPI(ai) {
   // Predicted kWh (today's forward prediction)
   const predicted = fmt(ai.prediction_kwh);
   UI.kpiPredicted.textContent = predicted !== null ? predicted : '—';
+  const lower = fmt(ai.prediction_lower_kwh);
+  const upper = fmt(ai.prediction_upper_kwh);
+  UI.predictionRange.textContent = lower !== null && upper !== null ? `Expected range: ${lower}–${upper} kWh` : 'Expected range: —';
 
   // Actual kWh
   const actual = fmt(ai.actual_kwh);
@@ -615,6 +619,8 @@ function renderSuggestions(aiRows, hourlyRows) {
     }
     if (latest?.status?.toLowerCase() === 'anomaly') suggestions.push(`Review ${latest.date}: the daily profile was flagged as anomalous.`);
     else suggestions.push('The latest completed daily profile is within the learned normal range.');
+    if (latest?.anomaly_explanation) suggestions.push(`Profile explanation: ${latest.anomaly_explanation}`);
+    if (latest?.profile_mode) suggestions.push(`Forecast profile: ${latest.profile_mode}.`);
   }
   const actuals = (hourlyRows || []).map(row => ({ hour: Number(row.hour), actual: toFloat(row.actual_kwh) }))
     .filter(row => row.actual !== null).sort((a, b) => b.actual - a.actual);
