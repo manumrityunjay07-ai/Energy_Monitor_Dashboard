@@ -65,12 +65,23 @@ const UI = {
   noActualNote:     $('no-actual-note'),
   historyTableBody: $('history-table-body'),
   suggestionsList:  $('suggestions-list'),
+  collectorHealth:  $('collector-health'),
+  collectorLastRun: $('collector-last-run'),
+  recordsCount:     $('records-count'),
+  historyCaption:   $('history-chart-caption'),
+  dailyMAE:         $('daily-mae'),
+  dailyRMSE:        $('daily-rmse'),
+  hourlyMAE:        $('hourly-mae'),
+  completedDays:    $('completed-days'),
+  performanceNote:  $('performance-note'),
 };
 
 /* ══════════════════════════════════════════════════════════════════
    CHART INSTANCE
 ══════════════════════════════════════════════════════════════════ */
 let hourlyChart = null;
+let dailyChart = null;
+let historyDays = 7;
 
 /* ══════════════════════════════════════════════════════════════════
    UTILITY — SAFE TEXT
@@ -616,6 +627,41 @@ function renderSuggestions(aiRows, hourlyRows) {
   }
 }
 
+function renderHealth(stateData) {
+  const lastRun = stateData?.last_run;
+  UI.collectorLastRun.textContent = formatISOtoIST(lastRun);
+  UI.recordsCount.textContent = `${Object.keys(stateData?.profiles || {}).length} days`;
+  const healthy = lastRun && Date.now() - new Date(lastRun).getTime() < 45 * 60 * 1000;
+  UI.collectorHealth.textContent = healthy ? 'Healthy' : 'Needs attention';
+  UI.collectorHealth.className = healthy ? 'health-good' : 'health-warn';
+}
+
+function renderDailyChart(aiRows) {
+  const rows = [...(aiRows || [])].filter(row => toFloat(row.actual_kwh) !== null || toFloat(row.prediction_kwh) !== null)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-historyDays);
+  UI.historyCaption.textContent = `Last ${historyDays} days`;
+  const chartData = { labels: rows.map(row => row.date), datasets: [
+    { label: 'Actual kWh', data: rows.map(row => toFloat(row.actual_kwh)), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.12)', tension: .35, spanGaps: true },
+    { label: 'Predicted kWh', data: rows.map(row => toFloat(row.prediction_kwh)), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.10)', tension: .35, spanGaps: true },
+  ] };
+  const options = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { color: '#94a3b8' } } }, scales: { x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,.05)' } }, y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,.05)' }, title: { display: true, text: 'Energy (kWh)', color: '#64748b' } } } };
+  if (dailyChart) { dailyChart.data = chartData; dailyChart.options = options; dailyChart.update(); }
+  else dailyChart = new Chart(document.getElementById('daily-history-chart').getContext('2d'), { type: 'line', data: chartData, options });
+}
+
+function renderPerformance(aiRows) {
+  const rows = (aiRows || []).map(row => ({ error: toFloat(row.prediction_error_kwh), hourly: toFloat(row.hourly_error_mae) })).filter(row => row.error !== null);
+  const abs = rows.map(row => Math.abs(row.error));
+  const mae = abs.length ? abs.reduce((a, b) => a + b, 0) / abs.length : null;
+  const rmse = abs.length ? Math.sqrt(rows.reduce((sum, row) => sum + row.error ** 2, 0) / rows.length) : null;
+  const hourly = rows.map(row => row.hourly).filter(v => v !== null);
+  UI.dailyMAE.textContent = mae === null ? '—' : mae.toFixed(2);
+  UI.dailyRMSE.textContent = rmse === null ? '—' : rmse.toFixed(2);
+  UI.hourlyMAE.textContent = hourly.length ? (hourly.reduce((a, b) => a + b, 0) / hourly.length).toFixed(2) : '—';
+  UI.completedDays.textContent = String(rows.length);
+  UI.performanceNote.textContent = rows.length >= 3 ? 'Metrics are based on completed forecast cycles.' : 'More completed forecast cycles are needed for reliable performance metrics.';
+}
+
 /* ══════════════════════════════════════════════════════════════════
    UI STATE HELPERS
 ══════════════════════════════════════════════════════════════════ */
@@ -666,6 +712,9 @@ async function refresh() {
     renderTable(hourlyToday);
     renderHistory(aiRows);
     renderSuggestions(aiRows, hourlyToday);
+    renderHealth(stateData);
+    renderDailyChart(aiRows);
+    renderPerformance(aiRows);
 
     showContent();
   } catch (err) {
@@ -691,6 +740,13 @@ function handleRefreshClick() {
 
 UI.btnRefresh.addEventListener('click', handleRefreshClick);
 UI.btnRetry.addEventListener('click', handleRefreshClick);
+document.querySelectorAll('.range-btn').forEach(button => {
+  button.addEventListener('click', () => {
+    historyDays = Number(button.dataset.days) || 7;
+    document.querySelectorAll('.range-btn').forEach(item => item.classList.toggle('is-active', item === button));
+    refresh();
+  });
+});
 
 /* ══════════════════════════════════════════════════════════════════
    BOOT
