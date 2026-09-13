@@ -220,7 +220,9 @@ function fmt(v, decimals = 2) {
    FETCH DATA
 ══════════════════════════════════════════════════════════════════ */
 async function fetchWithRetry(url, asJson = false) {
-  const fallbacks = [url, url.replace('https://raw.githubusercontent.com/', 'https://cdn.jsdelivr.net/gh/')];
+  const fallback = url.match(/^https:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)\/(.+)$/);
+  const cdnUrl = fallback ? `https://cdn.jsdelivr.net/gh/${fallback[1]}/${fallback[2]}@${fallback[3]}/${fallback[4]}` : url;
+  const fallbacks = [...new Set([url, cdnUrl])];
   let lastError;
   for (const candidate of fallbacks) {
     for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
@@ -241,7 +243,7 @@ async function fetchWithRetry(url, asJson = false) {
 async function loadAllData() {
   try {
     const payload = await fetchWithRetry(CONFIG.urls.dashboardData, true);
-    const normalized = { aiRows: payload.ai_results || [], hourlyRows: payload.hourly_predictions || [], stateData: payload.state || {}, health: payload.health || {} };
+    const normalized = { aiRows: payload.ai_results || [], hourlyRows: payload.hourly_predictions || [], stateData: payload.state || {}, health: { ...(payload.health || {}), source: 'live consolidated payload', generated_at: payload.generated_at } };
     localStorage.setItem('energy-dashboard-cache', JSON.stringify(normalized));
     return normalized;
   } catch (combinedError) {
@@ -250,7 +252,7 @@ async function loadAllData() {
       fetchWithRetry(CONFIG.urls.hourlyPredictions),
       fetchWithRetry(CONFIG.urls.state, true),
     ]);
-    return { aiRows: parseCSV(aiText), hourlyRows: parseCSV(hourlyText), stateData, health: { collector_status: 'legacy payload', error: combinedError.message } };
+    return { aiRows: parseCSV(aiText), hourlyRows: parseCSV(hourlyText), stateData, health: { collector_status: 'legacy payload', source: 'legacy three-file fallback', error: combinedError.message } };
   }
 }
 
@@ -664,7 +666,10 @@ function renderHealth(stateData, health = {}) {
   const learning = health.learning_samples ?? '—';
   UI.diagnosticStatus.textContent = healthy ? 'Operational' : 'Needs attention';
   UI.diagnosticStatus.className = healthy ? 'health-good' : 'health-warn';
-  UI.diagnosticMessage.textContent = `${missing} Automatic calibration has ${learning} completed learning sample${learning === 1 ? '' : 's'}. ${health.error ? `Last error: ${health.error}` : ''}`.trim();
+  const quality = health.data_quality?.score != null ? ` Data quality: ${health.data_quality.score}%.` : '';
+  const source = health.source ? ` Source: ${health.source}.` : '';
+  const learningState = health.learning_status ? ` Learning status: ${health.learning_status}.` : '';
+  UI.diagnosticMessage.textContent = `${missing} Automatic calibration has ${learning} completed learning sample${learning === 1 ? '' : 's'}.${quality}${learningState}${source} ${health.error ? `Last error: ${health.error}` : ''}`.trim();
 }
 
 function renderDailyChart(aiRows) {
