@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="ui-polish.css" />
   <link rel="stylesheet" href="monitoring-panels.css" />
   <link rel="stylesheet" href="confidence-ui.css" />
+  <link rel="stylesheet" href="diagnostics.css" />
 </head>
 <body>
 
@@ -163,6 +164,8 @@
         <div><span class="health-label">Collector</span><strong id="collector-health">Checking…</strong></div>
         <div><span class="health-label">Latest collection</span><strong id="collector-last-run">—</strong></div>
         <div><span class="health-label">Records available</span><strong id="records-count">—</strong></div>
+        <div><span class="health-label">Data freshness</span><strong id="data-freshness">—</strong></div>
+        <div><span class="health-label">API latency</span><strong id="api-latency">—</strong></div>
         <div class="range-controls" role="group" aria-label="History range">
           <button class="range-btn is-active" data-days="7">7 days</button>
           <button class="range-btn" data-days="14">14 days</button>
@@ -182,6 +185,14 @@
         <div class="chart-wrap">
           <canvas id="hourly-chart" aria-label="Hourly energy consumption chart"></canvas>
         </div>
+      </section>
+
+      <section class="card diagnostics-card" aria-label="Pipeline diagnostics">
+        <div class="table-section__header">
+          <h2 class="section-title">Pipeline Diagnostics</h2>
+          <span class="section-hint" id="pipeline-diagnostic-status">Waiting for health data</span>
+        </div>
+        <p id="pipeline-diagnostic-message">The collector health file reports API completeness, freshness, and automatic calibration status.</p>
       </section>
 
       <section class="card chart-section" aria-label="Daily historical chart">

@@ -16,12 +16,14 @@
 ══════════════════════════════════════════════════════════════════ */
 const CONFIG = {
   urls: {
+    dashboardData:     'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/main/results/dashboard_data.json',
     aiResults:         'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/main/results/ai_results.csv',
     hourlyPredictions: 'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/main/results/hourly_predictions.csv',
     state:             'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/main/data/state.json',
   },
   refreshInterval: 5 * 60 * 1000,   // 5 minutes
   timezone:        'Asia/Kolkata',
+  maxRetries: 3,
 };
 
 /* ══════════════════════════════════════════════════════════════════
@@ -69,6 +71,10 @@ const UI = {
   collectorHealth:  $('collector-health'),
   collectorLastRun: $('collector-last-run'),
   recordsCount:     $('records-count'),
+  dataFreshness:    $('data-freshness'),
+  apiLatency:       $('api-latency'),
+  diagnosticStatus: $('pipeline-diagnostic-status'),
+  diagnosticMessage:$('pipeline-diagnostic-message'),
   historyCaption:   $('history-chart-caption'),
   dailyMAE:         $('daily-mae'),
   dailyRMSE:        $('daily-rmse'),
@@ -213,29 +219,39 @@ function fmt(v, decimals = 2) {
 /* ══════════════════════════════════════════════════════════════════
    FETCH DATA
 ══════════════════════════════════════════════════════════════════ */
-async function fetchText(url) {
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return res.text();
-}
-
-async function fetchJSON(url) {
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return res.json();
+async function fetchWithRetry(url, asJson = false) {
+  const fallbacks = [url, url.replace('https://raw.githubusercontent.com/', 'https://cdn.jsdelivr.net/gh/')];
+  let lastError;
+  for (const candidate of fallbacks) {
+    for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
+      try {
+        const separator = candidate.includes('?') ? '&' : '?';
+        const res = await fetch(`${candidate}${separator}t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return asJson ? await res.json() : await res.text();
+      } catch (err) {
+        lastError = err;
+        if (attempt < CONFIG.maxRetries) await new Promise(resolve => setTimeout(resolve, 400 * attempt));
+      }
+    }
+  }
+  throw new Error(`${lastError?.message || 'request failed'} (${url})`);
 }
 
 async function loadAllData() {
-  const [aiText, hourlyText, stateData] = await Promise.all([
-    fetchText(CONFIG.urls.aiResults),
-    fetchText(CONFIG.urls.hourlyPredictions),
-    fetchJSON(CONFIG.urls.state),
-  ]);
-
-  const aiRows     = parseCSV(aiText);
-  const hourlyRows = parseCSV(hourlyText);
-
-  return { aiRows, hourlyRows, stateData };
+  try {
+    const payload = await fetchWithRetry(CONFIG.urls.dashboardData, true);
+    const normalized = { aiRows: payload.ai_results || [], hourlyRows: payload.hourly_predictions || [], stateData: payload.state || {}, health: payload.health || {} };
+    localStorage.setItem('energy-dashboard-cache', JSON.stringify(normalized));
+    return normalized;
+  } catch (combinedError) {
+    const [aiText, hourlyText, stateData] = await Promise.all([
+      fetchWithRetry(CONFIG.urls.aiResults),
+      fetchWithRetry(CONFIG.urls.hourlyPredictions),
+      fetchWithRetry(CONFIG.urls.state, true),
+    ]);
+    return { aiRows: parseCSV(aiText), hourlyRows: parseCSV(hourlyText), stateData, health: { collector_status: 'legacy payload', error: combinedError.message } };
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -633,13 +649,22 @@ function renderSuggestions(aiRows, hourlyRows) {
   }
 }
 
-function renderHealth(stateData) {
+function renderHealth(stateData, health = {}) {
   const lastRun = stateData?.last_run;
   UI.collectorLastRun.textContent = formatISOtoIST(lastRun);
   UI.recordsCount.textContent = `${Object.keys(stateData?.profiles || {}).length} days`;
-  const healthy = lastRun && Date.now() - new Date(lastRun).getTime() < 45 * 60 * 1000;
+  const ageMinutes = lastRun ? Math.max(0, Math.round((Date.now() - new Date(lastRun).getTime()) / 60000)) : null;
+  const healthy = health.collector_status === 'healthy' && lastRun && ageMinutes < 45;
   UI.collectorHealth.textContent = healthy ? 'Healthy' : 'Needs attention';
   UI.collectorHealth.className = healthy ? 'health-good' : 'health-warn';
+  UI.dataFreshness.textContent = ageMinutes === null ? 'Unknown' : `${ageMinutes} min ago`;
+  const latency = health.api_latency_ms || {};
+  UI.apiLatency.textContent = latency.hourly ? `${latency.hourly} ms` : '—';
+  const missing = Array.isArray(health.missing_hours) && health.missing_hours.length ? `Missing hours: ${health.missing_hours.join(', ')}.` : 'All returned hours passed validation.';
+  const learning = health.learning_samples ?? '—';
+  UI.diagnosticStatus.textContent = healthy ? 'Operational' : 'Needs attention';
+  UI.diagnosticStatus.className = healthy ? 'health-good' : 'health-warn';
+  UI.diagnosticMessage.textContent = `${missing} Automatic calibration has ${learning} completed learning sample${learning === 1 ? '' : 's'}. ${health.error ? `Last error: ${health.error}` : ''}`.trim();
 }
 
 function renderDailyChart(aiRows) {
@@ -706,7 +731,7 @@ function showContent() {
 async function refresh() {
   showLoading();
   try {
-    const { aiRows, hourlyRows, stateData } = await loadAllData();
+    const { aiRows, hourlyRows, stateData, health } = await loadAllData();
 
     const latestAI    = getLatestAiRow(aiRows);
     const targetDate  = latestAI ? latestAI.date : null;
@@ -718,13 +743,35 @@ async function refresh() {
     renderTable(hourlyToday);
     renderHistory(aiRows);
     renderSuggestions(aiRows, hourlyToday);
-    renderHealth(stateData);
+    renderHealth(stateData, health);
     renderDailyChart(aiRows);
     renderPerformance(aiRows);
 
     showContent();
   } catch (err) {
     console.error('[EnergyDash] Fetch error:', err);
+    try {
+      const cached = JSON.parse(localStorage.getItem('energy-dashboard-cache') || 'null');
+      if (cached?.aiRows?.length) {
+        const latestAI = getLatestAiRow(cached.aiRows);
+        const hourlyToday = mergeLiveActuals(getHourlyForDate(cached.hourlyRows, latestAI?.date), cached.stateData);
+        renderKPI(latestAI);
+        renderAnomalyStrip(latestAI);
+        renderChart(hourlyToday);
+        renderTable(hourlyToday);
+        renderHistory(cached.aiRows);
+        renderSuggestions(cached.aiRows, hourlyToday);
+        renderHealth(cached.stateData, { ...(cached.health || {}), collector_status: 'degraded', error: `${err.message}; showing cached data` });
+        renderDailyChart(cached.aiRows);
+        renderPerformance(cached.aiRows);
+        showContent();
+        UI.lastUpdated.textContent = `Showing cached data · ${nowIST()} IST`;
+        UI.updateDot.className = 'update-dot update-dot--error';
+        return;
+      }
+    } catch (cacheError) {
+      console.error('[EnergyDash] Cache error:', cacheError);
+    }
     showError(err.message || 'Unknown error');
   }
 }
