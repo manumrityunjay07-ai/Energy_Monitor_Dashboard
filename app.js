@@ -81,6 +81,12 @@ const UI = {
   hourlyMAE:        $('hourly-mae'),
   completedDays:    $('completed-days'),
   performanceNote:  $('performance-note'),
+  aiLearningStatus: $('ai-learning-status'),
+  aiLearningSamples: $('ai-learning-samples'),
+  aiBaselineMae: $('ai-baseline-mae'),
+  aiAdaptedMae: $('ai-adapted-mae'),
+  aiImprovementPercent: $('ai-improvement-percent'),
+  aiImprovementMessage: $('ai-improvement-message'),
 };
 
 /* ══════════════════════════════════════════════════════════════════
@@ -698,6 +704,31 @@ function renderPerformance(aiRows) {
   UI.performanceNote.textContent = rows.length >= 3 ? 'Metrics are based on completed forecast cycles.' : 'More completed forecast cycles are needed for reliable performance metrics.';
 }
 
+function renderAIImprovement(aiRows, health = {}) {
+  const guard = health.rollback_guard || {};
+  const evaluated = (aiRows || []).map(row => ({ actual: toFloat(row.actual_kwh), base: toFloat(row.base_prediction_kwh), adapted: toFloat(row.prediction_kwh) }))
+    .filter(row => row.actual !== null && row.base !== null && row.adapted !== null);
+  const baseMae = evaluated.length ? evaluated.reduce((sum, row) => sum + Math.abs(row.actual - row.base), 0) / evaluated.length : null;
+  const adaptedMae = evaluated.length ? evaluated.reduce((sum, row) => sum + Math.abs(row.actual - row.adapted), 0) / evaluated.length : null;
+  const improvement = baseMae !== null && baseMae > 0 && adaptedMae !== null ? ((baseMae - adaptedMae) / baseMae) * 100 : null;
+  const samples = health.learning_samples ?? evaluated.length;
+  const status = health.learning_status || (samples < 14 ? 'calibrating' : 'adaptive');
+  UI.aiLearningStatus.textContent = status;
+  UI.aiLearningSamples.textContent = String(samples);
+  UI.aiBaselineMae.textContent = baseMae === null ? '—' : baseMae.toFixed(2);
+  UI.aiAdaptedMae.textContent = adaptedMae === null ? '—' : adaptedMae.toFixed(2);
+  UI.aiImprovementPercent.textContent = improvement === null ? 'Pending' : `${improvement >= 0 ? '+' : ''}${improvement.toFixed(1)}%`;
+  if (guard.adaptation_enabled === false) {
+    UI.aiImprovementMessage.textContent = `Automatic adaptation is paused by the rollback guard. ${guard.reason || 'The baseline model is currently being used.'}`;
+  } else if (evaluated.length < 5) {
+    UI.aiImprovementMessage.textContent = `Collecting evidence: ${evaluated.length} completed comparison cycle${evaluated.length === 1 ? '' : 's'} available; at least 5 are needed for a meaningful baseline comparison.`;
+  } else if (improvement >= 0) {
+    UI.aiImprovementMessage.textContent = `The adapted model is currently ${improvement.toFixed(1)}% better than the baseline on completed comparison cycles.`;
+  } else {
+    UI.aiImprovementMessage.textContent = `The adapted model is currently ${Math.abs(improvement).toFixed(1)}% worse than the baseline; the rollback guard will protect future forecasts.`;
+  }
+}
+
 /* ══════════════════════════════════════════════════════════════════
    UI STATE HELPERS
 ══════════════════════════════════════════════════════════════════ */
@@ -751,6 +782,7 @@ async function refresh() {
     renderHealth(stateData, health);
     renderDailyChart(aiRows);
     renderPerformance(aiRows);
+    renderAIImprovement(aiRows, health);
 
     showContent();
   } catch (err) {
@@ -769,6 +801,7 @@ async function refresh() {
         renderHealth(cached.stateData, { ...(cached.health || {}), collector_status: 'degraded', error: `${err.message}; showing cached data` });
         renderDailyChart(cached.aiRows);
         renderPerformance(cached.aiRows);
+        renderAIImprovement(cached.aiRows, cached.health);
         showContent();
         UI.lastUpdated.textContent = `Showing cached data · ${nowIST()} IST`;
         UI.updateDot.className = 'update-dot update-dot--error';

@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="monitoring-panels.css" />
   <link rel="stylesheet" href="confidence-ui.css" />
   <link rel="stylesheet" href="diagnostics.css" />
+  <link rel="stylesheet" href="ai-improvement.css" />
 </head>
 <body>
 
@@ -265,6 +266,20 @@
           <div><span>Completed days</span><strong id="completed-days">—</strong><small>days</small></div>
         </div>
         <p class="performance-note" id="performance-note">More completed forecast cycles are needed for reliable performance metrics.</p>
+      </section>
+
+      <section class="card ai-improvement-card" aria-label="AI improvement tracking">
+        <div class="table-section__header">
+          <h2 class="section-title">AI Improvement Tracking</h2>
+          <span class="section-hint" id="ai-learning-status">Calibrating</span>
+        </div>
+        <div class="improvement-grid">
+          <div><span>Learning samples</span><strong id="ai-learning-samples">—</strong><small>completed days</small></div>
+          <div><span>Baseline MAE</span><strong id="ai-baseline-mae">—</strong><small>kWh</small></div>
+          <div><span>Adapted MAE</span><strong id="ai-adapted-mae">—</strong><small>kWh</small></div>
+          <div><span>Improvement</span><strong id="ai-improvement-percent">—</strong><small>versus baseline</small></div>
+        </div>
+        <p class="performance-note" id="ai-improvement-message">The system will compare the automatically adapted model with the original baseline after enough completed days are available.</p>
       </section>
 
     </main>
