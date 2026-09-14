@@ -103,6 +103,7 @@ let hourlyChart = null;
 let dailyChart = null;
 let historyDays = 7;
 let selectedHistoryDate = '';
+let activePayload = null;
 
 /* ══════════════════════════════════════════════════════════════════
    UTILITY — SAFE TEXT
@@ -805,13 +806,16 @@ async function refresh() {
   showLoading();
   try {
     const { aiRows, hourlyRows, stateData, health } = await loadAllData();
+    activePayload = { aiRows, hourlyRows, stateData, health };
 
     const latestAI    = getLatestAiRow(aiRows);
-    const targetDate  = latestAI ? latestAI.date : null;
+    const selectedAI  = selectedHistoryDate ? aiRows.find(row => row.date === selectedHistoryDate) : null;
+    const displayAI   = selectedAI || latestAI;
+    const targetDate  = displayAI ? displayAI.date : null;
     const hourlyToday = mergeLiveActuals(getHourlyForDate(hourlyRows, targetDate), stateData);
 
-    renderKPI(latestAI);
-    renderAnomalyStrip(latestAI);
+    renderKPI(displayAI);
+    renderAnomalyStrip(displayAI);
     renderChart(hourlyToday);
     renderTable(hourlyToday);
     renderHistory(aiRows);
@@ -827,10 +831,13 @@ async function refresh() {
     try {
       const cached = JSON.parse(localStorage.getItem('energy-dashboard-cache') || 'null');
       if (cached?.aiRows?.length) {
+        activePayload = cached;
         const latestAI = getLatestAiRow(cached.aiRows);
-        const hourlyToday = mergeLiveActuals(getHourlyForDate(cached.hourlyRows, latestAI?.date), cached.stateData);
-        renderKPI(latestAI);
-        renderAnomalyStrip(latestAI);
+        const selectedAI = selectedHistoryDate ? cached.aiRows.find(row => row.date === selectedHistoryDate) : null;
+        const displayAI = selectedAI || latestAI;
+        const hourlyToday = mergeLiveActuals(getHourlyForDate(cached.hourlyRows, displayAI?.date), cached.stateData);
+        renderKPI(displayAI);
+        renderAnomalyStrip(displayAI);
         renderChart(hourlyToday);
         renderTable(hourlyToday);
         renderHistory(cached.aiRows);
