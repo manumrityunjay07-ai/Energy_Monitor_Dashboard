@@ -44,10 +44,13 @@ const UI = {
 
   // KPI values
   kpiPredicted:     $('kpi-predicted'),
+  kpiPredictedLabel: $('kpi-predicted-label'),
   predictionRange:  $('prediction-range'),
   kpiActual:        $('kpi-actual'),
+  kpiActualLabel:   $('kpi-actual-label'),
   kpiActualUnit:    $('kpi-actual-unit'),
   kpiError:         $('kpi-error'),
+  kpiErrorLabel:    $('kpi-error-label'),
   kpiErrorUnit:     $('kpi-error-unit'),
   kpiAnomalyStatus: $('kpi-anomaly-status'),
 
@@ -328,7 +331,12 @@ function mergeLiveActuals(hourlyRows, stateData) {
 function renderKPI(ai) {
   if (!ai) return;
 
-  // Predicted kWh (today's forward prediction)
+  const recordDate = ai.date || 'latest completed day';
+  UI.kpiPredictedLabel.textContent = `Forecast after ${recordDate}`;
+  UI.kpiActualLabel.textContent = `Actual — ${recordDate}`;
+  UI.kpiErrorLabel.textContent = `Prediction Error — ${recordDate}`;
+
+  // Forward forecast associated with this completed record.
   const predicted = fmt(ai.prediction_kwh);
   UI.kpiPredicted.textContent = predicted !== null ? predicted : '—';
   const lower = fmt(ai.prediction_lower_kwh);
@@ -339,6 +347,7 @@ function renderKPI(ai) {
   const actual = fmt(ai.actual_kwh);
   if (actual !== null) {
     UI.kpiActual.textContent = actual;
+    UI.kpiActualUnit.textContent = 'kWh';
   } else {
     UI.kpiActual.textContent = 'Pending';
     UI.kpiActualUnit.textContent = '';
@@ -348,6 +357,7 @@ function renderKPI(ai) {
   const err = fmt(ai.prediction_error_kwh);
   if (err !== null) {
     UI.kpiError.textContent = err;
+    UI.kpiErrorUnit.textContent = 'kWh';
   } else {
     UI.kpiError.textContent = 'N/A';
     UI.kpiErrorUnit.textContent = '';
