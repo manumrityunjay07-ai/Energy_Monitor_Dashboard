@@ -88,7 +88,9 @@ const UI = {
   aiLearningSamples: $('ai-learning-samples'),
   aiBaselineMae: $('ai-baseline-mae'),
   aiAdaptedMae: $('ai-adapted-mae'),
+  aiDifferenceKwh: $('ai-difference-kwh'),
   aiImprovementPercent: $('ai-improvement-percent'),
+  aiRateComparison: $('ai-rate-comparison'),
   aiImprovementMessage: $('ai-improvement-message'),
 };
 
@@ -720,20 +722,28 @@ function renderAIImprovement(aiRows, stateData = {}) {
   const current = currentISTParts();
   const todayProfile = stateData?.profiles?.[current.date] || {};
   const elapsedHours = Math.max(0, current.hour);
-  const todayValues = Object.entries(todayProfile).filter(([hour, value]) => Number(hour) < elapsedHours && toFloat(value) !== null);
-  const previousValues = previous ? Object.entries(stateData?.profiles?.[previous.date] || {}).filter(([hour, value]) => Number(hour) < elapsedHours && toFloat(value) !== null) : [];
+  const todayProfileValues = Object.fromEntries(Object.entries(todayProfile).filter(([hour, value]) => Number(hour) < elapsedHours && toFloat(value) !== null));
+  const previousProfile = previous ? stateData?.profiles?.[previous.date] || {} : {};
+  const commonHours = Object.keys(todayProfileValues).filter(hour => Number(hour) < elapsedHours && toFloat(previousProfile[hour]) !== null);
+  const todayValues = commonHours.map(hour => [hour, todayProfileValues[hour]]);
+  const previousValues = commonHours.map(hour => [hour, previousProfile[hour]]);
   const todayTotal = todayValues.reduce((sum, [, value]) => sum + Number(value), 0);
   const previousTotal = previousValues.reduce((sum, [, value]) => sum + Number(value), 0);
   const change = previousValues.length && todayValues.length ? ((todayTotal - previousTotal) / Math.max(Math.abs(previousTotal), 1)) * 100 : null;
+  const difference = previousValues.length && todayValues.length ? todayTotal - previousTotal : null;
+  const todayRate = todayValues.length ? todayTotal / todayValues.length : null;
+  const previousRate = previousValues.length ? previousTotal / previousValues.length : null;
   UI.aiLearningStatus.textContent = 'day comparison';
   UI.aiLearningSamples.textContent = String(todayValues.length);
   UI.aiBaselineMae.textContent = previousValues.length ? previousTotal.toFixed(2) : '—';
   UI.aiAdaptedMae.textContent = todayValues.length ? todayTotal.toFixed(2) : '—';
+  UI.aiDifferenceKwh.textContent = difference === null ? '—' : `${difference >= 0 ? '+' : ''}${difference.toFixed(2)}`;
   UI.aiImprovementPercent.textContent = change === null ? '—' : `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+  UI.aiRateComparison.textContent = todayRate === null || previousRate === null ? '—' : `${todayRate.toFixed(1)} / ${previousRate.toFixed(1)}`;
   if (!previous || !previousValues.length || !todayValues.length) {
     UI.aiImprovementMessage.textContent = 'Waiting for matching completed hours from today and the previous completed day.';
   } else {
-    UI.aiImprovementMessage.textContent = `Compared ${todayValues.length} elapsed hours: today is ${Math.abs(change).toFixed(1)}% ${change >= 0 ? 'higher' : 'lower'} than ${previous.date}. This is a consumption comparison, not a model-accuracy score.`;
+    UI.aiImprovementMessage.textContent = `Like-for-like comparison across ${todayValues.length} elapsed hours: today used ${Math.abs(difference).toFixed(2)} kWh ${difference >= 0 ? 'more' : 'less'} (${Math.abs(change).toFixed(1)}%) than ${previous.date}. Average hourly use is ${todayRate.toFixed(1)} vs ${previousRate.toFixed(1)} kWh/hour.`;
   }
 }
 
