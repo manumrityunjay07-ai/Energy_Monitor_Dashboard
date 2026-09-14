@@ -77,6 +77,7 @@ const UI = {
   recordsCount:     $('records-count'),
   dataFreshness:    $('data-freshness'),
   apiLatency:       $('api-latency'),
+  currentDataStatus:$('current-data-status'),
   diagnosticStatus: $('pipeline-diagnostic-status'),
   diagnosticMessage:$('pipeline-diagnostic-message'),
   historyCaption:   $('history-chart-caption'),
@@ -691,6 +692,10 @@ function renderHealth(stateData, health = {}) {
   UI.dataFreshness.textContent = ageMinutes === null ? 'Unknown' : `${ageMinutes} min ago`;
   const latency = health.api_latency_ms || {};
   UI.apiLatency.textContent = latency.hourly ? `${latency.hourly} ms` : '—';
+  const qualityStatus = health.data_quality?.data_status || health.data_quality?.status || 'unknown';
+  const completedHours = health.data_quality?.completed_hours;
+  UI.currentDataStatus.textContent = completedHours != null ? `${qualityStatus} · ${completedHours} completed hours` : qualityStatus;
+  UI.currentDataStatus.className = qualityStatus === 'complete' ? 'health-good' : 'health-warn';
   const missing = Array.isArray(health.missing_hours) && health.missing_hours.length ? `Missing hours: ${health.missing_hours.join(', ')}.` : 'All returned hours passed validation.';
   const learning = health.learning_samples ?? '—';
   UI.diagnosticStatus.textContent = healthy ? 'Operational' : 'Needs attention';
