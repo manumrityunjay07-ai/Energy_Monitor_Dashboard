@@ -71,6 +71,7 @@ const UI = {
   noActualNote:     $('no-actual-note'),
   historyTableBody: $('history-table-body'),
   historyDateSelect: $('history-date-select'),
+  anomalyInvestigationList: $('anomaly-investigation-list'),
   suggestionsList:  $('suggestions-list'),
   collectorHealth:  $('collector-health'),
   collectorLastRun: $('collector-last-run'),
@@ -651,6 +652,17 @@ function renderHistory(aiRows) {
   }
 }
 
+function renderAnomalyInvestigation(hourlyRows) {
+  if (!UI.anomalyInvestigationList) return;
+  const rows = (hourlyRows || []).map(row => ({ hour: row.hour, actual: toFloat(row.actual_kwh), expected: toFloat(row.predicted_kwh) }))
+    .filter(row => row.actual !== null && row.expected !== null)
+    .map(row => ({ ...row, deviation: row.actual - row.expected, percent: row.expected ? ((row.actual - row.expected) / row.expected) * 100 : null }))
+    .sort((a, b) => Math.abs(b.deviation) - Math.abs(a.deviation)).slice(0, 5);
+  UI.anomalyInvestigationList.textContent = '';
+  if (!rows.length) { const li = document.createElement('li'); li.textContent = 'No completed actual-versus-expected hourly comparisons available.'; UI.anomalyInvestigationList.appendChild(li); return; }
+  rows.forEach(row => { const li = document.createElement('li'); const direction = row.deviation >= 0 ? 'above' : 'below'; li.textContent = `${hourLabel(row.hour)}: actual ${row.actual.toFixed(2)} kWh, expected ${row.expected.toFixed(2)} kWh — ${Math.abs(row.deviation).toFixed(2)} kWh (${Math.abs(row.percent || 0).toFixed(1)}%) ${direction} expected.`; UI.anomalyInvestigationList.appendChild(li); });
+}
+
 function renderSuggestions(aiRows, hourlyRows) {
   const list = UI.suggestionsList;
   list.textContent = '';
@@ -818,6 +830,7 @@ async function refresh() {
     renderAnomalyStrip(displayAI);
     renderChart(hourlyToday);
     renderTable(hourlyToday);
+    renderAnomalyInvestigation(hourlyToday);
     renderHistory(aiRows);
     renderSuggestions(aiRows, hourlyToday);
     renderHealth(stateData, health);
@@ -840,6 +853,7 @@ async function refresh() {
         renderAnomalyStrip(displayAI);
         renderChart(hourlyToday);
         renderTable(hourlyToday);
+        renderAnomalyInvestigation(hourlyToday);
         renderHistory(cached.aiRows);
         renderSuggestions(cached.aiRows, hourlyToday);
         renderHealth(cached.stateData, { ...(cached.health || {}), collector_status: 'degraded', error: `${err.message}; showing cached data` });
