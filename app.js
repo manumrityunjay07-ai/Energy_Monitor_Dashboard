@@ -704,28 +704,26 @@ function renderPerformance(aiRows) {
   UI.performanceNote.textContent = rows.length >= 3 ? 'Metrics are based on completed forecast cycles.' : 'More completed forecast cycles are needed for reliable performance metrics.';
 }
 
-function renderAIImprovement(aiRows, health = {}) {
-  const guard = health.rollback_guard || {};
-  const evaluated = (aiRows || []).map(row => ({ actual: toFloat(row.actual_kwh), base: toFloat(row.base_prediction_kwh), adapted: toFloat(row.prediction_kwh) }))
-    .filter(row => row.actual !== null && row.base !== null && row.adapted !== null);
-  const baseMae = evaluated.length ? evaluated.reduce((sum, row) => sum + Math.abs(row.actual - row.base), 0) / evaluated.length : null;
-  const adaptedMae = evaluated.length ? evaluated.reduce((sum, row) => sum + Math.abs(row.actual - row.adapted), 0) / evaluated.length : null;
-  const improvement = evaluated.length >= 5 && baseMae !== null && baseMae > 0 && adaptedMae !== null ? ((baseMae - adaptedMae) / baseMae) * 100 : null;
-  const samples = health.learning_samples ?? evaluated.length;
-  const status = health.learning_status || (samples < 14 ? 'calibrating' : 'adaptive');
-  UI.aiLearningStatus.textContent = status;
-  UI.aiLearningSamples.textContent = String(samples);
-  UI.aiBaselineMae.textContent = baseMae === null ? '—' : baseMae.toFixed(2);
-  UI.aiAdaptedMae.textContent = adaptedMae === null ? '—' : adaptedMae.toFixed(2);
-  UI.aiImprovementPercent.textContent = improvement === null ? 'Pending' : `${improvement >= 0 ? '+' : ''}${improvement.toFixed(1)}%`;
-  if (guard.adaptation_enabled === false) {
-    UI.aiImprovementMessage.textContent = `Automatic adaptation is paused by the rollback guard. ${guard.reason || 'The baseline model is currently being used.'}`;
-  } else if (evaluated.length < 5) {
-    UI.aiImprovementMessage.textContent = `Insufficient evidence: ${evaluated.length} completed comparison cycle${evaluated.length === 1 ? '' : 's'} available. The baseline is being used until at least 5 cycles are complete.`;
-  } else if (improvement >= 0) {
-    UI.aiImprovementMessage.textContent = `The adapted model is currently ${improvement.toFixed(1)}% better than the baseline on completed comparison cycles.`;
+function renderAIImprovement(aiRows, stateData = {}) {
+  const completed = (aiRows || []).filter(row => toFloat(row.actual_kwh) !== null).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const previous = completed.length ? completed[completed.length - 1] : null;
+  const current = currentISTParts();
+  const todayProfile = stateData?.profiles?.[current.date] || {};
+  const elapsedHours = Math.max(0, current.hour);
+  const todayValues = Object.entries(todayProfile).filter(([hour, value]) => Number(hour) < elapsedHours && toFloat(value) !== null);
+  const previousValues = previous ? Object.entries(stateData?.profiles?.[previous.date] || {}).filter(([hour, value]) => Number(hour) < elapsedHours && toFloat(value) !== null) : [];
+  const todayTotal = todayValues.reduce((sum, [, value]) => sum + Number(value), 0);
+  const previousTotal = previousValues.reduce((sum, [, value]) => sum + Number(value), 0);
+  const change = previousValues.length && todayValues.length ? ((todayTotal - previousTotal) / Math.max(Math.abs(previousTotal), 1)) * 100 : null;
+  UI.aiLearningStatus.textContent = 'day comparison';
+  UI.aiLearningSamples.textContent = String(todayValues.length);
+  UI.aiBaselineMae.textContent = previousValues.length ? previousTotal.toFixed(2) : '—';
+  UI.aiAdaptedMae.textContent = todayValues.length ? todayTotal.toFixed(2) : '—';
+  UI.aiImprovementPercent.textContent = change === null ? '—' : `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+  if (!previous || !previousValues.length || !todayValues.length) {
+    UI.aiImprovementMessage.textContent = 'Waiting for matching completed hours from today and the previous completed day.';
   } else {
-    UI.aiImprovementMessage.textContent = `The adapted model is currently ${Math.abs(improvement).toFixed(1)}% worse than the baseline; the rollback guard will protect future forecasts.`;
+    UI.aiImprovementMessage.textContent = `Compared ${todayValues.length} elapsed hours: today is ${Math.abs(change).toFixed(1)}% ${change >= 0 ? 'higher' : 'lower'} than ${previous.date}. This is a consumption comparison, not a model-accuracy score.`;
   }
 }
 
@@ -782,7 +780,7 @@ async function refresh() {
     renderHealth(stateData, health);
     renderDailyChart(aiRows);
     renderPerformance(aiRows);
-    renderAIImprovement(aiRows, health);
+    renderAIImprovement(aiRows, stateData);
 
     showContent();
   } catch (err) {
@@ -801,7 +799,7 @@ async function refresh() {
         renderHealth(cached.stateData, { ...(cached.health || {}), collector_status: 'degraded', error: `${err.message}; showing cached data` });
         renderDailyChart(cached.aiRows);
         renderPerformance(cached.aiRows);
-        renderAIImprovement(cached.aiRows, cached.health);
+        renderAIImprovement(cached.aiRows, cached.stateData);
         showContent();
         UI.lastUpdated.textContent = `Showing cached data · ${nowIST()} IST`;
         UI.updateDot.className = 'update-dot update-dot--error';
