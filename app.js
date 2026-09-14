@@ -687,7 +687,8 @@ function renderHealth(stateData, health = {}) {
   const quality = health.data_quality?.score != null ? ` Data quality: ${health.data_quality.score}%.` : '';
   const source = health.source ? ` Source: ${health.source}.` : '';
   const learningState = health.learning_status ? ` Learning status: ${health.learning_status}.` : '';
-  UI.diagnosticMessage.textContent = `${missing} Automatic calibration has ${learning} completed learning sample${learning === 1 ? '' : 's'}.${quality}${learningState}${source} ${health.error ? `Last error: ${health.error}` : ''}`.trim();
+  const timestamps = health.daily_total_collection_at ? ` Daily totals: ${formatISOtoIST(health.daily_total_collection_at)}; payload: ${formatISOtoIST(health.dashboard_payload_generated_at)}.` : '';
+  UI.diagnosticMessage.textContent = `${missing} Automatic calibration has ${learning} completed learning sample${learning === 1 ? '' : 's'}.${quality}${learningState}${source}${timestamps} ${health.error ? `Last error: ${health.error}` : ''}`.trim();
 }
 
 function renderDailyChart(aiRows) {
