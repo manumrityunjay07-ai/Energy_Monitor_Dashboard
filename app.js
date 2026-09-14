@@ -718,7 +718,9 @@ function renderHealth(stateData, health = {}) {
   const learningState = health.learning_status ? ` Learning status: ${health.learning_status}.` : '';
   const timestamps = health.daily_total_collection_at ? ` Daily totals: ${formatISOtoIST(health.daily_total_collection_at)}; payload: ${formatISOtoIST(health.dashboard_payload_generated_at)}.` : '';
   const coverage = health.confidence_coverage?.rate != null ? ` Confidence interval coverage: ${(health.confidence_coverage.rate * 100).toFixed(1)}% (${health.confidence_coverage.evaluated} evaluated).` : '';
-  UI.diagnosticMessage.textContent = `${missing} Automatic calibration has ${learning} completed learning sample${learning === 1 ? '' : 's'}.${quality}${learningState}${source}${timestamps}${coverage} ${health.error ? `Last error: ${health.error}` : ''}`.trim();
+  const model = health.model_evaluation?.mae_kwh != null ? ` Model MAE: ${health.model_evaluation.mae_kwh.toFixed(2)} kWh; RMSE: ${health.model_evaluation.rmse_kwh.toFixed(2)} kWh.` : '';
+  const rollback = health.rollback_guard?.adaptation_enabled === false ? ' Adaptation rollback guard is active.' : '';
+  UI.diagnosticMessage.textContent = `${missing} Automatic calibration has ${learning} completed learning sample${learning === 1 ? '' : 's'}.${quality}${learningState}${source}${timestamps}${coverage}${model}${rollback} ${health.error ? `Last error: ${health.error}` : ''}`.trim();
 }
 
 function renderDailyChart(aiRows) {
