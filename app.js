@@ -70,6 +70,7 @@ const UI = {
   hourlyTableBody:  $('hourly-table-body'),
   noActualNote:     $('no-actual-note'),
   historyTableBody: $('history-table-body'),
+  historyDateSelect: $('history-date-select'),
   suggestionsList:  $('suggestions-list'),
   collectorHealth:  $('collector-health'),
   collectorLastRun: $('collector-last-run'),
@@ -100,6 +101,7 @@ const UI = {
 let hourlyChart = null;
 let dailyChart = null;
 let historyDays = 7;
+let selectedHistoryDate = '';
 
 /* ══════════════════════════════════════════════════════════════════
    UTILITY — SAFE TEXT
@@ -615,7 +617,16 @@ function renderTable(hourlyRows) {
 }
 
 function renderHistory(aiRows) {
-  const rows = [...(aiRows || [])].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 14);
+  const allRows = [...(aiRows || [])].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const dates = [...new Set(allRows.map(row => row.date).filter(Boolean))];
+  if (UI.historyDateSelect) {
+    const current = selectedHistoryDate;
+    UI.historyDateSelect.textContent = '';
+    const allOption = document.createElement('option'); allOption.value = ''; allOption.textContent = 'All days'; UI.historyDateSelect.appendChild(allOption);
+    dates.forEach(date => { const option = document.createElement('option'); option.value = date; option.textContent = date; UI.historyDateSelect.appendChild(option); });
+    UI.historyDateSelect.value = dates.includes(current) ? current : '';
+  }
+  const rows = (selectedHistoryDate ? allRows.filter(row => row.date === selectedHistoryDate) : allRows).slice(0, 14);
   UI.historyTableBody.textContent = '';
   for (const row of rows) {
     const tr = document.createElement('tr');
@@ -850,6 +861,10 @@ function handleRefreshClick() {
 
 UI.btnRefresh.addEventListener('click', handleRefreshClick);
 UI.btnRetry.addEventListener('click', handleRefreshClick);
+UI.historyDateSelect?.addEventListener('change', event => {
+  selectedHistoryDate = event.target.value || '';
+  refresh();
+});
 document.querySelectorAll('.range-btn').forEach(button => {
   button.addEventListener('click', () => {
     historyDays = Number(button.dataset.days) || 7;
