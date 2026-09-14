@@ -263,8 +263,8 @@
 
       <section class="card performance-card" aria-label="Model performance">
         <div class="table-section__header">
-          <h2 class="section-title">Model Performance</h2>
-          <span class="section-hint">Calculated from completed records</span>
+            <h2 class="section-title">Model Accuracy</h2>
+            <span class="section-hint">Forecast errors on completed records</span>
         </div>
         <div class="performance-grid">
           <div><span>Daily MAE</span><strong id="daily-mae">—</strong><small>kWh</small></div>
@@ -277,8 +277,8 @@
 
       <section class="card ai-improvement-card" aria-label="AI improvement tracking">
         <div class="table-section__header">
-          <h2 class="section-title">Previous Day vs Today</h2>
-          <span class="section-hint" id="ai-learning-status">Calibrating</span>
+            <h2 class="section-title">Consumption Comparison</h2>
+            <span class="section-hint" id="ai-learning-status">Previous day vs today</span>
         </div>
         <div class="improvement-grid comparison-grid">
           <div><span>Hours compared</span><strong id="ai-learning-samples">—</strong><small>elapsed hours</small></div>
@@ -288,7 +288,7 @@
           <div><span>Change vs previous day</span><strong id="ai-improvement-percent">—</strong><small>same elapsed hours</small></div>
           <div><span>Average per hour</span><strong id="ai-rate-comparison">—</strong><small>today vs previous</small></div>
         </div>
-        <p class="performance-note" id="ai-improvement-message">The dashboard will compare today’s completed hours with the same hours from the previous completed day.</p>
+        <p class="performance-note" id="ai-improvement-message">This compares consumption only; it is not a model-accuracy score.</p>
       </section>
 
     </main>
