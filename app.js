@@ -710,7 +710,7 @@ function renderAIImprovement(aiRows, health = {}) {
     .filter(row => row.actual !== null && row.base !== null && row.adapted !== null);
   const baseMae = evaluated.length ? evaluated.reduce((sum, row) => sum + Math.abs(row.actual - row.base), 0) / evaluated.length : null;
   const adaptedMae = evaluated.length ? evaluated.reduce((sum, row) => sum + Math.abs(row.actual - row.adapted), 0) / evaluated.length : null;
-  const improvement = baseMae !== null && baseMae > 0 && adaptedMae !== null ? ((baseMae - adaptedMae) / baseMae) * 100 : null;
+  const improvement = evaluated.length >= 5 && baseMae !== null && baseMae > 0 && adaptedMae !== null ? ((baseMae - adaptedMae) / baseMae) * 100 : null;
   const samples = health.learning_samples ?? evaluated.length;
   const status = health.learning_status || (samples < 14 ? 'calibrating' : 'adaptive');
   UI.aiLearningStatus.textContent = status;
@@ -721,7 +721,7 @@ function renderAIImprovement(aiRows, health = {}) {
   if (guard.adaptation_enabled === false) {
     UI.aiImprovementMessage.textContent = `Automatic adaptation is paused by the rollback guard. ${guard.reason || 'The baseline model is currently being used.'}`;
   } else if (evaluated.length < 5) {
-    UI.aiImprovementMessage.textContent = `Collecting evidence: ${evaluated.length} completed comparison cycle${evaluated.length === 1 ? '' : 's'} available; at least 5 are needed for a meaningful baseline comparison.`;
+    UI.aiImprovementMessage.textContent = `Insufficient evidence: ${evaluated.length} completed comparison cycle${evaluated.length === 1 ? '' : 's'} available. The baseline is being used until at least 5 cycles are complete.`;
   } else if (improvement >= 0) {
     UI.aiImprovementMessage.textContent = `The adapted model is currently ${improvement.toFixed(1)}% better than the baseline on completed comparison cycles.`;
   } else {
