@@ -713,7 +713,8 @@ function renderDailyChart(aiRows) {
   UI.historyCaption.textContent = `Last ${historyDays} days`;
   const chartData = { labels: rows.map(row => row.date), datasets: [
     { label: 'Actual kWh', data: rows.map(row => toFloat(row.actual_kwh)), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.12)', tension: .35, spanGaps: true },
-    { label: 'Predicted kWh', data: rows.map(row => toFloat(row.prediction_kwh)), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.10)', tension: .35, spanGaps: true },
+    { label: 'Adapted forecast kWh', data: rows.map(row => toFloat(row.prediction_kwh)), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.10)', tension: .35, spanGaps: true },
+    { label: 'Baseline forecast kWh', data: rows.map(row => toFloat(row.base_prediction_kwh)), borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,.08)', borderDash: [6, 4], tension: .35, spanGaps: true },
   ] };
   const options = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { color: '#94a3b8' } } }, scales: { x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,.05)' } }, y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,.05)' }, title: { display: true, text: 'Energy (kWh)', color: '#64748b' } } } };
   if (dailyChart) { dailyChart.data = chartData; dailyChart.options = options; dailyChart.update(); }
