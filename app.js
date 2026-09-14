@@ -619,7 +619,7 @@ function renderHistory(aiRows) {
   UI.historyTableBody.textContent = '';
   for (const row of rows) {
     const tr = document.createElement('tr');
-      [row.date || '—', row.status === 'data_incomplete' ? 'incomplete · daily total' : (row.status || '—'), fmt(row.actual_kwh) ?? 'Pending', fmt(row.prediction_kwh) ?? '—', fmt(row.prediction_error_kwh) ?? '—']
+    [row.date || '—', row.data_status || (row.status === 'data_incomplete' ? 'daily_total_only' : 'complete'), row.status || '—', fmt(row.actual_kwh) ?? 'Pending', fmt(row.prediction_kwh) ?? '—', fmt(row.prediction_error_kwh) ?? '—']
       .forEach((value, index) => {
         const td = document.createElement('td');
         td.textContent = value;
@@ -631,7 +631,7 @@ function renderHistory(aiRows) {
   if (!rows.length) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = 5;
+    td.colSpan = 6;
     td.textContent = 'No completed daily records yet.';
     tr.appendChild(td);
     UI.historyTableBody.appendChild(tr);
