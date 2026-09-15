@@ -24,6 +24,7 @@ const CONFIG = {
   refreshInterval: 5 * 60 * 1000,   // 5 minutes
   timezone:        'Asia/Kolkata',
   maxRetries: 3,
+  cacheMaxAgeMs: 30 * 60 * 1000,
 };
 
 /* ══════════════════════════════════════════════════════════════════
@@ -260,7 +261,7 @@ async function loadAllData() {
   try {
     const payload = await fetchWithRetry(CONFIG.urls.dashboardData, true);
     const normalized = { aiRows: payload.ai_results || [], hourlyRows: payload.hourly_predictions || [], stateData: payload.state || {}, health: { ...(payload.health || {}), source: 'live consolidated payload', generated_at: payload.generated_at } };
-    localStorage.setItem('energy-dashboard-cache', JSON.stringify(normalized));
+    localStorage.setItem('energy-dashboard-cache', JSON.stringify({ cachedAt: Date.now(), data: normalized }));
     return normalized;
   } catch (combinedError) {
     const [aiText, hourlyText, stateData] = await Promise.all([
@@ -854,8 +855,11 @@ async function refresh() {
   } catch (err) {
     console.error('[EnergyDash] Fetch error:', err);
     try {
-      const cached = JSON.parse(localStorage.getItem('energy-dashboard-cache') || 'null');
-      if (cached?.aiRows?.length) {
+      const storedCache = JSON.parse(localStorage.getItem('energy-dashboard-cache') || 'null');
+      const cached = storedCache?.data || storedCache;
+      const cachedAt = Number(storedCache?.cachedAt || 0);
+      const cacheIsFresh = cachedAt > 0 && Date.now() - cachedAt <= CONFIG.cacheMaxAgeMs;
+      if (cacheIsFresh && cached?.aiRows?.length) {
         activePayload = cached;
         const latestAI = getLatestAiRow(cached.aiRows);
         const selectedAI = selectedHistoryDate ? cached.aiRows.find(row => row.date === selectedHistoryDate) : null;
@@ -870,7 +874,7 @@ async function refresh() {
         renderAnomalyInvestigation(hourlyToday);
         renderHistory(cached.aiRows);
         renderSuggestions(cached.aiRows, hourlyToday);
-        renderHealth(cached.stateData, { ...(cached.health || {}), collector_status: 'degraded', error: `${err.message}; showing cached data` });
+        renderHealth(cached.stateData, { ...(cached.health || {}), collector_status: 'degraded', source: 'cached payload', error: `${err.message}; showing cached data` });
         renderDailyChart(cached.aiRows);
         renderPerformance(cached.aiRows);
         renderAIImprovement(cached.aiRows, cached.stateData);
