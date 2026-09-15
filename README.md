@@ -40,7 +40,10 @@ Energy_Monitor_Dashboard/
 ├── index.html   # HTML shell — layout, semantic markup, ARIA roles
 ├── style.css    # Full dark-theme stylesheet (design tokens, responsive grid)
 ├── app.js       # Data fetching, CSV parsing, Chart.js rendering, auto-refresh
-└── README.md    # This file
+├── dashboard_contract_test.mjs # Date-alignment, DOM, cache, and accessibility checks
+├── .github/workflows/dashboard-ci.yml # Syntax and contract validation
+├── README.md    # This file
+├── *.css        # Theme, diagnostics, chart, and responsive styles
 ```
 
 ---
@@ -105,7 +108,23 @@ Then open `http://localhost:8080` in your browser.
 
 ### `state.json`
 
-Historical hourly profiles keyed by date and hour, used by the AI model. The dashboard reads this file but currently uses it as supplementary context.
+Historical and current measured hourly profiles keyed by date and hour. For the current IST date, the dashboard joins completed readings from `state.json.profiles[YYYY-MM-DD]` to matching forecast rows by **date and hour**. It never substitutes another date when a matching hourly forecast is unavailable.
+
+### Date-integrity rule
+
+The daily record date, hourly forecast date, and measured profile date must agree before actual/error values are displayed together. If no hourly rows exist for the selected daily date, the dashboard shows an explicit no-data state rather than silently displaying another date’s predictions.
+
+### Troubleshooting blank actual values
+
+Blank actual values are expected for future or incomplete hours. For the current day, confirm that `data/state.json` contains a profile for the current IST date and that `results/hourly_predictions.csv` contains rows for that same date. If the dates differ, the collector publication is ahead of the dashboard’s daily history; refresh after the next successful collector cycle rather than treating predictions as actual measurements.
+
+## Collector publication and review policy
+
+The collector runs every 15 minutes, but generated files are published through one reusable automation pull request rather than directly to protected `main`. Each run updates the same review queue and reports its run ID, freshness timestamp, data-quality score, row counts, date range, missing hours, and model versions. Reviewers should merge the latest PR revision at the agreed operational cadence (for example, once per day or after a validated batch), not once per scheduled run. Because stale reviews are dismissed, never merge an older revision after a newer run updates the PR.
+
+## Release acceptance checklist
+
+Before accepting a deployment, verify that the dashboard source PR is merged, the public page loads the merged source, the displayed hourly date matches the selected daily date, current completed-hour actuals appear, and a missing-date case shows an explicit no-data state. Verify that the collector PR has passed the required `test` check, including `validate_outputs.py`, and that the latest generated data is newer than the previously published snapshot.
 
 ---
 
