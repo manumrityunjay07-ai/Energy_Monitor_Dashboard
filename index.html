@@ -185,6 +185,7 @@
       <section class="card chart-section" aria-label="24-hour hourly energy chart">
         <div class="chart-section__header">
           <h2 class="section-title">24-Hour Hourly Consumption</h2>
+          <span class="section-hint" id="hourly-data-date">Data date: —</span>
           <div class="chart-legend" aria-hidden="true">
             <span class="legend-dot legend-dot--predicted"></span><span>Predicted</span>
             <span class="legend-dot legend-dot--actual"></span><span>Actual</span>
@@ -192,8 +193,9 @@
           </div>
         </div>
         <div class="chart-wrap">
-          <canvas id="hourly-chart" aria-label="Hourly energy consumption chart"></canvas>
+          <canvas id="hourly-chart" aria-label="Hourly energy consumption chart" aria-describedby="hourly-chart-summary"></canvas>
         </div>
+        <p class="sr-only" id="hourly-chart-summary">No hourly records are available for the selected daily date.</p>
       </section>
 
       <section class="card diagnostics-card" aria-label="Pipeline diagnostics">
@@ -209,7 +211,8 @@
           <h2 class="section-title">Daily Actual vs Predicted</h2>
           <span class="section-hint" id="history-chart-caption">Last 7 days</span>
         </div>
-        <div class="chart-wrap chart-wrap--daily"><canvas id="daily-history-chart" aria-label="Daily historical energy chart"></canvas></div>
+        <div class="chart-wrap chart-wrap--daily"><canvas id="daily-history-chart" aria-label="Daily historical energy chart" aria-describedby="daily-chart-summary"></canvas></div>
+        <p class="sr-only" id="daily-chart-summary">No daily historical records are available.</p>
       </section>
 
       <!-- Hourly data table -->
