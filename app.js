@@ -16,9 +16,9 @@
 ══════════════════════════════════════════════════════════════════ */
 const CONFIG = {
   urls: {
-    dashboardData:     'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/main/results/dashboard_data.json',
-    aiResults:         'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/main/results/ai_results.csv',
-    hourlyPredictions: 'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/main/results/hourly_predictions.csv',
+    dashboardData:     'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/dashboard_data.json',
+    aiResults:         'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/ai_results.csv',
+    hourlyPredictions: 'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/hourly_predictions.csv',
     state:             'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/main/data/state.json',
   },
   refreshInterval: 5 * 60 * 1000,   // 5 minutes
