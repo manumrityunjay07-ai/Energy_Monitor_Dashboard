@@ -80,6 +80,9 @@ const UI = {
   dataFreshness:    $('data-freshness'),
   apiLatency:       $('api-latency'),
   currentDataStatus:$('current-data-status'),
+  hourlyDataDate:   $('hourly-data-date'),
+  hourlyChartSummary:$('hourly-chart-summary'),
+  dailyChartSummary: $('daily-chart-summary'),
   diagnosticStatus: $('pipeline-diagnostic-status'),
   diagnosticMessage:$('pipeline-diagnostic-message'),
   historyCaption:   $('history-chart-caption'),
@@ -261,7 +264,7 @@ async function loadAllData() {
   try {
     const payload = await fetchWithRetry(CONFIG.urls.dashboardData, true);
     const normalized = { aiRows: payload.ai_results || [], hourlyRows: payload.hourly_predictions || [], stateData: payload.state || {}, health: { ...(payload.health || {}), source: 'live consolidated payload', generated_at: payload.generated_at } };
-    localStorage.setItem('energy-dashboard-cache', JSON.stringify({ cachedAt: Date.now(), data: normalized }));
+    saveCache(normalized);
     return normalized;
   } catch (combinedError) {
     const [aiText, hourlyText, stateData] = await Promise.all([
@@ -269,7 +272,17 @@ async function loadAllData() {
       fetchWithRetry(CONFIG.urls.hourlyPredictions),
       fetchWithRetry(CONFIG.urls.state, true),
     ]);
-    return { aiRows: parseCSV(aiText), hourlyRows: parseCSV(hourlyText), stateData, health: { collector_status: 'legacy payload', source: 'legacy three-file fallback', error: combinedError.message } };
+    const normalized = { aiRows: parseCSV(aiText), hourlyRows: parseCSV(hourlyText), stateData, health: { collector_status: 'legacy payload', source: 'legacy three-file fallback', error: combinedError.message } };
+    saveCache(normalized);
+    return normalized;
+  }
+}
+
+function saveCache(data) {
+  try {
+    localStorage.setItem('energy-dashboard-cache', JSON.stringify({ cachedAt: Date.now(), data }));
+  } catch (err) {
+    console.warn('[EnergyDash] Cache write skipped:', err);
   }
 }
 
@@ -289,20 +302,12 @@ function getLatestAiRow(rows) {
 }
 
 /**
- * Returns hourly rows for the same date as the latest ai_results row.
- * Falls back to the most recent date found in hourly_predictions.csv.
+ * Returns hourly rows only for the requested date.
+ * Never substitutes another date: mixing dates makes the dashboard misleading.
  */
 function getHourlyForDate(hourlyRows, targetDate) {
-  if (!hourlyRows || hourlyRows.length === 0) return [];
-  const filtered = targetDate
-    ? hourlyRows.filter(r => r.date === targetDate)
-    : [];
-  if (filtered.length > 0) return filtered;
-
-  // Fallback: use latest date in the file
-  const dates = [...new Set(hourlyRows.map(r => r.date))].sort();
-  const latest = dates[dates.length - 1];
-  return hourlyRows.filter(r => r.date === latest);
+  if (!hourlyRows || hourlyRows.length === 0 || !targetDate) return [];
+  return hourlyRows.filter(r => r.date === targetDate);
 }
 
 function currentISTParts() {
@@ -511,6 +516,11 @@ function renderChart(hourlyRows) {
   }
 
   const chartData = { labels, datasets };
+  const chartDate = hourlyRows[0]?.date || 'no matching date';
+  UI.hourlyDataDate.textContent = `Data date: ${chartDate}`;
+  UI.hourlyChartSummary.textContent = hourlyRows.length
+    ? `Hourly chart for ${chartDate}. ${hasActual ? 'Actual values are available for completed hours.' : 'Actual values are not yet available.'}`
+    : 'No hourly records are available for the selected daily date.';
 
   const commonScaleOptions = {
     grid:   { color: 'rgba(255,255,255,0.05)', drawBorder: false },
@@ -594,7 +604,9 @@ function renderTable(hourlyRows) {
 
   const hasAny = Object.values(hourMap).some(v => v.actual !== null);
   UI.noActualNote.classList.remove('hidden');
-  UI.noActualNote.lastChild.textContent = hasAny
+  UI.noActualNote.lastChild.textContent = !hourlyRows.length
+    ? 'No hourly records are available for the selected daily date'
+    : hasAny
     ? 'Actual values are shown for completed hours; final daily results are confirmed after the 24-hour cycle.'
     : 'Actual values are not yet available for this period';
 
@@ -736,6 +748,9 @@ function renderDailyChart(aiRows) {
   const rows = [...(aiRows || [])].filter(row => toFloat(row.actual_kwh) !== null || toFloat(row.prediction_kwh) !== null)
     .sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-historyDays);
   UI.historyCaption.textContent = `Last ${historyDays} days`;
+  UI.dailyChartSummary.textContent = rows.length
+    ? `Daily energy history for ${rows[0].date} through ${rows[rows.length - 1].date}, showing actual and forecast values.`
+    : 'No daily historical records are available.';
   const chartData = { labels: rows.map(row => row.date), datasets: [
     { label: 'Actual kWh', data: rows.map(row => toFloat(row.actual_kwh)), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.12)', tension: .35, spanGaps: true },
     { label: 'Adapted forecast kWh', data: rows.map(row => toFloat(row.prediction_kwh)), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.10)', tension: .35, spanGaps: true },
