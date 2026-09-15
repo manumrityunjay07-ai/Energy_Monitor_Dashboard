@@ -310,7 +310,8 @@ function currentISTParts() {
     year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false,
   }).formatToParts(new Date());
   const value = name => parts.find(p => p.type === name)?.value;
-  return { date: `${value('year')}-${value('month')}-${value('day')}`, hour: Number(value('hour')) };
+  const rawHour = Number(value('hour'));
+  return { date: `${value('year')}-${value('month')}-${value('day')}`, hour: rawHour === 24 ? 0 : rawHour };
 }
 
 function mergeLiveActuals(hourlyRows, stateData) {
@@ -393,10 +394,17 @@ function renderKPI(ai) {
    RENDER — ANOMALY STRIP
 ══════════════════════════════════════════════════════════════════ */
 function renderAnomalyStrip(ai) {
-  if (!ai) return;
+  if (!ai) {
+    UI.anomalyBarFill.style.width = '0%';
+    UI.anomalyBarThresh.style.left = '0%';
+    UI.barThreshLabel.textContent = 'Threshold —';
+    UI.barMaxLabel.textContent = 'Max —';
+    return;
+  }
 
   const score     = toFloat(ai.anomaly_score);
   const threshold = toFloat(ai.anomaly_threshold);
+  UI.anomalyBarFill.classList.remove('anomaly-bar-fill--danger');
 
   UI.anomalyScore.textContent     = score     !== null ? score.toFixed(4)     : '—';
   UI.anomalyThreshold.textContent = threshold !== null ? threshold.toFixed(4) : '—';
@@ -407,7 +415,7 @@ function renderAnomalyStrip(ai) {
 
   // Progress bar
   if (score !== null && threshold !== null) {
-    const maxVal  = Math.max(score, threshold) * 1.4;
+    const maxVal  = Math.max(Math.max(score, threshold) * 1.4, 1e-9);
     const fillPct = Math.min((score / maxVal) * 100, 100);
     const threshPct = Math.min((threshold / maxVal) * 100, 100);
 
