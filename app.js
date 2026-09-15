@@ -645,7 +645,7 @@ function renderHistory(aiRows) {
       .forEach((value, index) => {
         const td = document.createElement('td');
         td.textContent = value;
-        if (index === 1) td.className = String(value).toLowerCase() === 'anomaly' ? 'td-error' : 'td-actual';
+        if (index === 2) td.className = String(value).toLowerCase() === 'anomaly' ? 'td-error' : 'td-actual';
         tr.appendChild(td);
       });
     UI.historyTableBody.appendChild(tr);
@@ -834,7 +834,9 @@ async function refresh() {
     const selectedAI  = selectedHistoryDate ? aiRows.find(row => row.date === selectedHistoryDate) : null;
     const displayAI   = selectedAI || latestAI;
     const targetDate  = displayAI ? displayAI.date : null;
-    const hourlyToday = mergeLiveActuals(getHourlyForDate(hourlyRows, targetDate), stateData);
+    const hourlyToday = targetDate === currentISTParts().date
+      ? mergeLiveActuals(getHourlyForDate(hourlyRows, targetDate), stateData)
+      : getHourlyForDate(hourlyRows, targetDate);
 
     renderKPI(displayAI);
     renderAnomalyStrip(displayAI);
@@ -858,7 +860,9 @@ async function refresh() {
         const latestAI = getLatestAiRow(cached.aiRows);
         const selectedAI = selectedHistoryDate ? cached.aiRows.find(row => row.date === selectedHistoryDate) : null;
         const displayAI = selectedAI || latestAI;
-        const hourlyToday = mergeLiveActuals(getHourlyForDate(cached.hourlyRows, displayAI?.date), cached.stateData);
+        const hourlyToday = displayAI?.date === currentISTParts().date
+          ? mergeLiveActuals(getHourlyForDate(cached.hourlyRows, displayAI?.date), cached.stateData)
+          : getHourlyForDate(cached.hourlyRows, displayAI?.date);
         renderKPI(displayAI);
         renderAnomalyStrip(displayAI);
         renderChart(hourlyToday);
