@@ -114,6 +114,8 @@ Historical and current measured hourly profiles keyed by date and hour. For the 
 
 The daily record date, hourly forecast date, and measured profile date must agree before actual/error values are displayed together. If no hourly rows exist for the selected daily date, the dashboard shows an explicit no-data state rather than silently displaying another date’s predictions.
 
+In the default live view, if current-date hourly forecasts exist but the latest daily result is still pending, the dashboard displays the current forecast and labels it **“Daily result pending”**. Historical date selections remain strict and never switch to another date automatically.
+
 ### Troubleshooting blank actual values
 
 Blank actual values are expected for future or incomplete hours. For the current day, confirm that `data/state.json` contains a profile for the current IST date and that `results/hourly_predictions.csv` contains rows for that same date. If the dates differ, the collector publication is ahead of the dashboard’s daily history; refresh after the next successful collector cycle rather than treating predictions as actual measurements.

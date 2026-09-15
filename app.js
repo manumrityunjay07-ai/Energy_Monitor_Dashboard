@@ -310,6 +310,18 @@ function getHourlyForDate(hourlyRows, targetDate) {
   return hourlyRows.filter(r => r.date === targetDate);
 }
 
+function getHourlyDisplayContext(aiRows, hourlyRows) {
+  const latestAI = getLatestAiRow(aiRows);
+  const selectedAI = selectedHistoryDate ? aiRows.find(row => row.date === selectedHistoryDate) : null;
+  const displayAI = selectedAI || latestAI;
+  const currentDate = currentISTParts().date;
+  const currentRows = getHourlyForDate(hourlyRows, currentDate);
+  if (!selectedHistoryDate && currentRows.length > 0 && latestAI?.date !== currentDate) {
+    return { date: currentDate, pendingDailyDate: latestAI?.date || null };
+  }
+  return { date: displayAI?.date || null, pendingDailyDate: null };
+}
+
 function currentISTParts() {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: CONFIG.timezone,
@@ -443,7 +455,7 @@ function renderAnomalyStrip(ai) {
 /* ══════════════════════════════════════════════════════════════════
    RENDER — CHART
 ══════════════════════════════════════════════════════════════════ */
-function renderChart(hourlyRows) {
+function renderChart(hourlyRows, context = {}) {
   const canvas  = document.getElementById('hourly-chart');
   const ctx     = canvas.getContext('2d');
 
@@ -517,9 +529,13 @@ function renderChart(hourlyRows) {
 
   const chartData = { labels, datasets };
   const chartDate = hourlyRows[0]?.date || 'no matching date';
-  UI.hourlyDataDate.textContent = `Data date: ${chartDate}`;
+  UI.hourlyDataDate.textContent = context.pendingDailyDate
+    ? `Forecast date: ${chartDate} · Daily result pending (latest: ${context.pendingDailyDate})`
+    : `Data date: ${chartDate}`;
   UI.hourlyChartSummary.textContent = hourlyRows.length
-    ? `Hourly chart for ${chartDate}. ${hasActual ? 'Actual values are available for completed hours.' : 'Actual values are not yet available.'}`
+    ? `${context.pendingDailyDate ? `Current forecast for ${chartDate}; daily result for ${context.pendingDailyDate} is pending. ` : `Hourly chart for ${chartDate}. `}${hasActual ? 'Actual values are available for completed hours.' : 'Actual values are not yet available.'}`
+    : context.pendingDailyDate
+    ? `No hourly forecast records are available for the current date ${chartDate}.`
     : 'No hourly records are available for the selected daily date.';
 
   const commonScaleOptions = {
@@ -585,7 +601,7 @@ function renderChart(hourlyRows) {
 /* ══════════════════════════════════════════════════════════════════
    RENDER — HOURLY TABLE
 ══════════════════════════════════════════════════════════════════ */
-function renderTable(hourlyRows) {
+function renderTable(hourlyRows, context = {}) {
   // Build hour map 0-23
   const hourMap = {};
   for (let h = 0; h < 24; h++) {
@@ -605,7 +621,9 @@ function renderTable(hourlyRows) {
   const hasAny = Object.values(hourMap).some(v => v.actual !== null);
   UI.noActualNote.classList.remove('hidden');
   UI.noActualNote.lastChild.textContent = !hourlyRows.length
-    ? 'No hourly records are available for the selected daily date'
+    ? context.pendingDailyDate
+    ? 'No hourly forecast records are available for the current date'
+    : 'No hourly records are available for the selected daily date'
     : hasAny
     ? 'Actual values are shown for completed hours; final daily results are confirmed after the 24-hour cycle.'
     : 'Actual values are not yet available for this period';
@@ -849,15 +867,15 @@ async function refresh() {
     const latestAI    = getLatestAiRow(aiRows);
     const selectedAI  = selectedHistoryDate ? aiRows.find(row => row.date === selectedHistoryDate) : null;
     const displayAI   = selectedAI || latestAI;
-    const targetDate  = displayAI ? displayAI.date : null;
-    const hourlyToday = targetDate === currentISTParts().date
-      ? mergeLiveActuals(getHourlyForDate(hourlyRows, targetDate), stateData)
-      : getHourlyForDate(hourlyRows, targetDate);
+    const hourlyContext = getHourlyDisplayContext(aiRows, hourlyRows);
+    const hourlyToday = hourlyContext.date === currentISTParts().date
+      ? mergeLiveActuals(getHourlyForDate(hourlyRows, hourlyContext.date), stateData)
+      : getHourlyForDate(hourlyRows, hourlyContext.date);
 
     renderKPI(displayAI);
     renderAnomalyStrip(displayAI);
-    renderChart(hourlyToday);
-    renderTable(hourlyToday);
+    renderChart(hourlyToday, hourlyContext);
+    renderTable(hourlyToday, hourlyContext);
     renderAnomalyInvestigation(hourlyToday);
     renderHistory(aiRows);
     renderSuggestions(aiRows, hourlyToday);
@@ -879,13 +897,14 @@ async function refresh() {
         const latestAI = getLatestAiRow(cached.aiRows);
         const selectedAI = selectedHistoryDate ? cached.aiRows.find(row => row.date === selectedHistoryDate) : null;
         const displayAI = selectedAI || latestAI;
-        const hourlyToday = displayAI?.date === currentISTParts().date
-          ? mergeLiveActuals(getHourlyForDate(cached.hourlyRows, displayAI?.date), cached.stateData)
-          : getHourlyForDate(cached.hourlyRows, displayAI?.date);
+        const hourlyContext = getHourlyDisplayContext(cached.aiRows, cached.hourlyRows);
+        const hourlyToday = hourlyContext.date === currentISTParts().date
+          ? mergeLiveActuals(getHourlyForDate(cached.hourlyRows, hourlyContext.date), cached.stateData)
+          : getHourlyForDate(cached.hourlyRows, hourlyContext.date);
         renderKPI(displayAI);
         renderAnomalyStrip(displayAI);
-        renderChart(hourlyToday);
-        renderTable(hourlyToday);
+        renderChart(hourlyToday, hourlyContext);
+        renderTable(hourlyToday, hourlyContext);
         renderAnomalyInvestigation(hourlyToday);
         renderHistory(cached.aiRows);
         renderSuggestions(cached.aiRows, hourlyToday);
