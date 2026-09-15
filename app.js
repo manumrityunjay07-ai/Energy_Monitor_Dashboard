@@ -939,6 +939,32 @@ function handleRefreshClick() {
   refresh().then(scheduleAutoRefresh);
 }
 
+async function handleDataDownload(event) {
+  const link = event.currentTarget;
+  const url = link.href;
+  const filename = link.getAttribute('download') || url.split('/').pop() || 'energy-data';
+  event.preventDefault();
+  link.classList.add('is-downloading');
+  try {
+    const separator = url.includes('?') ? '&' : '?';
+    const response = await fetch(`${url}${separator}download=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blobUrl = URL.createObjectURL(await response.blob());
+    const downloadLink = document.createElement('a');
+    downloadLink.href = blobUrl;
+    downloadLink.download = filename;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  } catch (error) {
+    console.warn('[EnergyDash] Download fallback:', error);
+    window.open(url, '_blank', 'noopener');
+  } finally {
+    link.classList.remove('is-downloading');
+  }
+}
+
 UI.btnRefresh.addEventListener('click', handleRefreshClick);
 UI.btnRetry.addEventListener('click', handleRefreshClick);
 UI.historyDateSelect?.addEventListener('change', event => {
@@ -951,6 +977,9 @@ document.querySelectorAll('.range-btn').forEach(button => {
     document.querySelectorAll('.range-btn').forEach(item => item.classList.toggle('is-active', item === button));
     refresh();
   });
+});
+document.querySelectorAll('.download-controls a[download]').forEach(link => {
+  link.addEventListener('click', handleDataDownload);
 });
 
 /* ══════════════════════════════════════════════════════════════════

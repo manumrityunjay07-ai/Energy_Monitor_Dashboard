@@ -231,6 +231,8 @@ body {
 .btn-refresh:hover  { opacity: .9; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(59,130,246,.45); }
 .btn-refresh:active { transform: translateY(0); }
 
+.download-controls a.is-downloading { opacity: .55; pointer-events: none; }
+
 .btn-refresh__icon { flex-shrink: 0; }
 .btn-refresh__icon--spinning { animation: spin .7s linear infinite; }
 
