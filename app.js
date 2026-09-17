@@ -18,6 +18,7 @@ const CONFIG = {
   urls: {
     dashboardData:     'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/dashboard_data.json',
     aiResults:         'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/ai_results.csv',
+    dailyTotals:       'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/daily_totals.csv',
     hourlyPredictions: 'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/hourly_predictions.csv',
     state:             'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/main/data/state.json',
   },
@@ -263,16 +264,17 @@ async function fetchWithRetry(url, asJson = false) {
 async function loadAllData() {
   try {
     const payload = await fetchWithRetry(CONFIG.urls.dashboardData, true);
-    const normalized = { aiRows: payload.ai_results || [], hourlyRows: payload.hourly_predictions || [], stateData: payload.state || {}, health: { ...(payload.health || {}), source: 'live consolidated payload', generated_at: payload.generated_at } };
+    const normalized = { aiRows: payload.ai_results || [], hourlyRows: payload.hourly_predictions || [], dailyTotalRows: payload.daily_totals || [], stateData: payload.state || {}, health: { ...(payload.health || {}), source: 'live consolidated payload', generated_at: payload.generated_at } };
     saveCache(normalized);
     return normalized;
   } catch (combinedError) {
-    const [aiText, hourlyText, stateData] = await Promise.all([
+    const [aiText, hourlyText, dailyTotalsText, stateData] = await Promise.all([
       fetchWithRetry(CONFIG.urls.aiResults),
       fetchWithRetry(CONFIG.urls.hourlyPredictions),
+      fetchWithRetry(CONFIG.urls.dailyTotals),
       fetchWithRetry(CONFIG.urls.state, true),
     ]);
-    const normalized = { aiRows: parseCSV(aiText), hourlyRows: parseCSV(hourlyText), stateData, health: { collector_status: 'legacy payload', source: 'legacy three-file fallback', error: combinedError.message } };
+    const normalized = { aiRows: parseCSV(aiText), hourlyRows: parseCSV(hourlyText), dailyTotalRows: parseCSV(dailyTotalsText), stateData, health: { collector_status: 'legacy payload', source: 'legacy files fallback', error: combinedError.message } };
     saveCache(normalized);
     return normalized;
   }
@@ -658,8 +660,17 @@ function renderTable(hourlyRows, context = {}) {
   }
 }
 
-function renderHistory(aiRows) {
-  const allRows = [...(aiRows || [])].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+function renderHistory(aiRows, dailyTotalRows = []) {
+  const byDate = new Map((aiRows || []).filter(row => row.date).map(row => [row.date, { ...row }]));
+  (dailyTotalRows || []).forEach(total => {
+    if (!total.date) return;
+    const row = byDate.get(total.date) || { date: total.date };
+    if (toFloat(row.actual_kwh) === null && toFloat(total.total_kwh) !== null) row.actual_kwh = total.total_kwh;
+    if (!row.data_status) row.data_status = 'daily_total_only';
+    if (!row.status) row.status = 'daily_total_only';
+    byDate.set(total.date, row);
+  });
+  const allRows = [...byDate.values()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
   const dates = [...new Set(allRows.map(row => row.date).filter(Boolean))];
   if (UI.historyDateSelect) {
     const current = selectedHistoryDate;
@@ -668,7 +679,7 @@ function renderHistory(aiRows) {
     dates.forEach(date => { const option = document.createElement('option'); option.value = date; option.textContent = date; UI.historyDateSelect.appendChild(option); });
     UI.historyDateSelect.value = dates.includes(current) ? current : '';
   }
-  const rows = (selectedHistoryDate ? allRows.filter(row => row.date === selectedHistoryDate) : allRows).slice(0, 14);
+  const rows = (selectedHistoryDate ? allRows.filter(row => row.date === selectedHistoryDate) : allRows).slice(0, 30);
   UI.historyTableBody.textContent = '';
   for (const row of rows) {
     const tr = document.createElement('tr');
@@ -733,10 +744,11 @@ function renderSuggestions(aiRows, hourlyRows) {
   }
 }
 
-function renderHealth(stateData, health = {}) {
+function renderHealth(stateData, health = {}, dailyTotalRows = []) {
   const lastRun = stateData?.last_run;
   UI.collectorLastRun.textContent = formatISOtoIST(lastRun);
-  UI.recordsCount.textContent = `${Object.keys(stateData?.profiles || {}).length} days`;
+  const recordCount = dailyTotalRows.length || Object.keys(stateData?.profiles || {}).length;
+  UI.recordsCount.textContent = `${recordCount} days`;
   const ageMinutes = lastRun ? Math.max(0, Math.round((Date.now() - new Date(lastRun).getTime()) / 60000)) : null;
   const healthy = health.collector_status === 'healthy' && lastRun && ageMinutes < 45;
   UI.collectorHealth.textContent = healthy ? 'Healthy' : 'Needs attention';
@@ -762,8 +774,15 @@ function renderHealth(stateData, health = {}) {
   UI.diagnosticMessage.textContent = `${missing} Automatic calibration has ${learning} completed learning sample${learning === 1 ? '' : 's'}.${quality}${learningState}${source}${timestamps}${coverage}${model}${rollback} ${health.error ? `Last error: ${health.error}` : ''}`.trim();
 }
 
-function renderDailyChart(aiRows) {
-  const rows = [...(aiRows || [])].filter(row => toFloat(row.actual_kwh) !== null || toFloat(row.prediction_kwh) !== null)
+function renderDailyChart(aiRows, dailyTotalRows = []) {
+  const byDate = new Map((aiRows || []).filter(row => row.date).map(row => [row.date, { ...row }]));
+  (dailyTotalRows || []).forEach(total => {
+    if (!total.date) return;
+    const row = byDate.get(total.date) || { date: total.date };
+    if (toFloat(row.actual_kwh) === null) row.actual_kwh = total.total_kwh;
+    byDate.set(total.date, row);
+  });
+  const rows = [...byDate.values()].filter(row => toFloat(row.actual_kwh) !== null || toFloat(row.prediction_kwh) !== null)
     .sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-historyDays);
   UI.historyCaption.textContent = `Last ${historyDays} days`;
   UI.dailyChartSummary.textContent = rows.length
@@ -861,8 +880,8 @@ function showContent() {
 async function refresh() {
   showLoading();
   try {
-    const { aiRows, hourlyRows, stateData, health } = await loadAllData();
-    activePayload = { aiRows, hourlyRows, stateData, health };
+    const { aiRows, hourlyRows, dailyTotalRows, stateData, health } = await loadAllData();
+    activePayload = { aiRows, hourlyRows, dailyTotalRows, stateData, health };
 
     const latestAI    = getLatestAiRow(aiRows);
     const selectedAI  = selectedHistoryDate ? aiRows.find(row => row.date === selectedHistoryDate) : null;
@@ -877,10 +896,10 @@ async function refresh() {
     renderChart(hourlyToday, hourlyContext);
     renderTable(hourlyToday, hourlyContext);
     renderAnomalyInvestigation(hourlyToday);
-    renderHistory(aiRows);
+    renderHistory(aiRows, dailyTotalRows);
     renderSuggestions(aiRows, hourlyToday);
-    renderHealth(stateData, health);
-    renderDailyChart(aiRows);
+    renderHealth(stateData, health, dailyTotalRows);
+    renderDailyChart(aiRows, dailyTotalRows);
     renderPerformance(aiRows);
     renderAIImprovement(aiRows, stateData);
 
@@ -906,10 +925,10 @@ async function refresh() {
         renderChart(hourlyToday, hourlyContext);
         renderTable(hourlyToday, hourlyContext);
         renderAnomalyInvestigation(hourlyToday);
-        renderHistory(cached.aiRows);
+        renderHistory(cached.aiRows, cached.dailyTotalRows);
         renderSuggestions(cached.aiRows, hourlyToday);
-        renderHealth(cached.stateData, { ...(cached.health || {}), collector_status: 'degraded', source: 'cached payload', error: `${err.message}; showing cached data` });
-        renderDailyChart(cached.aiRows);
+        renderHealth(cached.stateData, { ...(cached.health || {}), collector_status: 'degraded', source: 'cached payload', error: `${err.message}; showing cached data` }, cached.dailyTotalRows || []);
+        renderDailyChart(cached.aiRows, cached.dailyTotalRows);
         renderPerformance(cached.aiRows);
         renderAIImprovement(cached.aiRows, cached.stateData);
         showContent();
