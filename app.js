@@ -237,6 +237,14 @@ function fmt(v, decimals = 2) {
   return n.toFixed(decimals);
 }
 
+function rowPredictionError(row) {
+  const recorded = toFloat(row?.prediction_error_kwh);
+  if (recorded !== null) return recorded;
+  const actual = toFloat(row?.actual_kwh);
+  const predicted = toFloat(row?.prediction_kwh);
+  return actual !== null && predicted !== null ? actual - predicted : null;
+}
+
 /* ══════════════════════════════════════════════════════════════════
    FETCH DATA
 ══════════════════════════════════════════════════════════════════ */
@@ -382,7 +390,7 @@ function renderKPI(ai) {
   }
 
   // Prediction error
-  const err = fmt(ai.prediction_error_kwh);
+  const err = fmt(rowPredictionError(ai));
   if (err !== null) {
     UI.kpiError.textContent = err;
     UI.kpiErrorUnit.textContent = 'kWh';
@@ -404,6 +412,9 @@ function renderKPI(ai) {
     UI.kpiAnomalyStatus.classList.add('status--normal');
   } else if (status.includes('wait') || status.includes('complete') || status === '') {
     UI.kpiAnomalyStatus.textContent = '⏳ Waiting for complete day';
+    UI.kpiAnomalyStatus.classList.add('status--waiting');
+  } else if (status === 'daily_total_only') {
+    UI.kpiAnomalyStatus.textContent = 'Daily total only';
     UI.kpiAnomalyStatus.classList.add('status--waiting');
   } else {
     UI.kpiAnomalyStatus.textContent = escapeAttr(ai.status) || '—';
@@ -683,7 +694,7 @@ function renderHistory(aiRows, dailyTotalRows = []) {
   UI.historyTableBody.textContent = '';
   for (const row of rows) {
     const tr = document.createElement('tr');
-    [row.date || '—', row.data_status || (row.status === 'data_incomplete' ? 'daily_total_only' : 'complete'), row.status || '—', fmt(row.actual_kwh) ?? 'Pending', fmt(row.prediction_kwh) ?? '—', fmt(row.prediction_error_kwh) ?? '—']
+    [row.date || '—', row.data_status || (row.status === 'data_incomplete' ? 'daily_total_only' : 'complete'), row.status === 'daily_total_only' ? 'Daily total only' : (row.status || '—'), fmt(row.actual_kwh) ?? 'Pending', fmt(row.prediction_kwh) ?? '—', fmt(rowPredictionError(row)) ?? '—']
       .forEach((value, index) => {
         const td = document.createElement('td');
         td.textContent = value;
