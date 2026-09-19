@@ -675,6 +675,13 @@ function historyEnergyStatus(row) {
   return row.status === 'normal' || row.status === 'daily_total_only' ? 'Normal' : 'data_incomplete';
 }
 
+function historyDataStatus(row) {
+  if (row.data_status) return row.data_status;
+  if (row.status === 'data_incomplete') return 'data_incomplete';
+  if (row.status === 'daily_total_only') return 'daily_total_only';
+  return 'complete';
+}
+
 function renderHistory(aiRows, dailyTotalRows = []) {
   const byDate = new Map((aiRows || []).filter(row => row.date).map(row => [row.date, { ...row }]));
   (dailyTotalRows || []).forEach(total => {
@@ -698,7 +705,7 @@ function renderHistory(aiRows, dailyTotalRows = []) {
   UI.historyTableBody.textContent = '';
   for (const row of rows) {
     const tr = document.createElement('tr');
-    [row.date || '—', row.data_status || (row.status === 'data_incomplete' ? 'daily_total_only' : 'complete'), historyEnergyStatus(row), fmt(row.actual_kwh) ?? 'Pending', fmt(row.prediction_kwh) ?? '—', fmt(rowPredictionError(row)) ?? '—']
+    [row.date || '—', historyDataStatus(row), historyEnergyStatus(row), fmt(row.actual_kwh) ?? 'Pending', fmt(row.prediction_kwh) ?? '—', fmt(rowPredictionError(row)) ?? '—']
       .forEach((value, index) => {
         const td = document.createElement('td');
         td.textContent = value;
