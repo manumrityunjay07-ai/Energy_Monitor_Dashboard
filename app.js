@@ -694,7 +694,7 @@ function renderHistory(aiRows, dailyTotalRows = []) {
   UI.historyTableBody.textContent = '';
   for (const row of rows) {
     const tr = document.createElement('tr');
-    [row.date || '—', row.data_status || (row.status === 'data_incomplete' ? 'daily_total_only' : 'complete'), row.status === 'normal' ? 'Normal' : 'data_incomplete', fmt(row.actual_kwh) ?? 'Pending', fmt(row.prediction_kwh) ?? '—', fmt(rowPredictionError(row)) ?? '—']
+    [row.date || '—', row.data_status || (row.status === 'data_incomplete' ? 'daily_total_only' : 'complete'), row.status === 'normal' || row.status === 'daily_total_only' ? 'Normal' : 'data_incomplete', fmt(row.actual_kwh) ?? 'Pending', fmt(row.prediction_kwh) ?? '—', fmt(rowPredictionError(row)) ?? '—']
       .forEach((value, index) => {
         const td = document.createElement('td');
         td.textContent = value;
