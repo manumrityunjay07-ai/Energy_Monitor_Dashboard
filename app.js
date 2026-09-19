@@ -676,9 +676,9 @@ function historyEnergyStatus(row) {
 }
 
 function historyDataStatus(row) {
-  if (row.data_status) return row.data_status;
   if (row.status === 'data_incomplete') return 'data_incomplete';
   if (row.status === 'daily_total_only') return 'daily_total_only';
+  if (row.data_status) return row.data_status;
   return 'complete';
 }
 
