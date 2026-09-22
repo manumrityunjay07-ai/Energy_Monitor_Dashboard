@@ -242,7 +242,7 @@ function rowPredictionError(row) {
   const recorded = toFloat(row?.prediction_error_kwh);
   if (recorded !== null) return recorded;
   const actual = toFloat(row?.actual_kwh);
-  const predicted = toFloat(row?.prediction_kwh);
+  const predicted = toFloat(row?.previous_prediction_kwh);
   return actual !== null && predicted !== null ? actual - predicted : null;
 }
 
@@ -717,7 +717,9 @@ function renderHistory(aiRows, dailyTotalRows = []) {
   UI.historyTableBody.textContent = '';
   for (const row of rows) {
     const tr = document.createElement('tr');
-    [row.date || '—', historyDataStatus(row), historyEnergyStatus(row), fmt(row.actual_kwh) ?? 'Pending', fmt(row.prediction_kwh) ?? '—', fmt(rowPredictionError(row)) ?? '—']
+    // prediction_kwh is the forward forecast for the following date. Historical
+    // errors must use the forecast issued for this same completed date.
+    [row.date || '—', historyDataStatus(row), historyEnergyStatus(row), fmt(row.actual_kwh) ?? 'Pending', fmt(row.previous_prediction_kwh) ?? '—', fmt(rowPredictionError(row)) ?? '—']
       .forEach((value, index) => {
         const td = document.createElement('td');
         td.textContent = value;
@@ -816,7 +818,7 @@ function renderDailyChart(aiRows, dailyTotalRows = []) {
     if (toFloat(row.actual_kwh) === null) row.actual_kwh = total.total_kwh;
     byDate.set(total.date, row);
   });
-  const rows = [...byDate.values()].filter(row => toFloat(row.actual_kwh) !== null || toFloat(row.prediction_kwh) !== null)
+  const rows = [...byDate.values()].filter(row => toFloat(row.actual_kwh) !== null || toFloat(row.previous_prediction_kwh) !== null)
     .sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-historyDays);
   UI.historyCaption.textContent = `Last ${historyDays} days`;
   UI.dailyChartSummary.textContent = rows.length
@@ -824,7 +826,7 @@ function renderDailyChart(aiRows, dailyTotalRows = []) {
     : 'No daily historical records are available.';
   const chartData = { labels: rows.map(row => row.date), datasets: [
     { label: 'Actual kWh', data: rows.map(row => toFloat(row.actual_kwh)), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.12)', tension: .35, spanGaps: true },
-    { label: 'Adapted forecast kWh', data: rows.map(row => toFloat(row.prediction_kwh)), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.10)', tension: .35, spanGaps: true },
+    { label: 'Evaluated forecast kWh', data: rows.map(row => toFloat(row.previous_prediction_kwh)), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.10)', tension: .35, spanGaps: true },
     { label: 'Baseline forecast kWh', data: rows.map(row => toFloat(row.base_prediction_kwh)), borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,.08)', borderDash: [6, 4], tension: .35, spanGaps: true },
   ] };
   const options = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { color: '#94a3b8' } } }, scales: { x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,.05)' } }, y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,.05)' }, title: { display: true, text: 'Energy (kWh)', color: '#64748b' } } } };
