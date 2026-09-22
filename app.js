@@ -16,6 +16,7 @@
 ══════════════════════════════════════════════════════════════════ */
 const CONFIG = {
   urls: {
+    liveDataApi:       'https://api.github.com/repos/manumrityunjay07-ai/Energy_Monitor_HTTP/contents/results/dashboard_data.json?ref=live-data',
     dashboardData:     'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/dashboard_data.json',
     aiResults:         'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/ai_results.csv',
     dailyTotals:       'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/daily_totals.csv',
@@ -271,20 +272,30 @@ async function fetchWithRetry(url, asJson = false) {
 
 async function loadAllData() {
   try {
-    const payload = await fetchWithRetry(CONFIG.urls.dashboardData, true);
+    const apiEnvelope = await fetchWithRetry(CONFIG.urls.liveDataApi, true);
+    const payload = apiEnvelope?.content
+      ? JSON.parse(atob(apiEnvelope.content.replace(/\s/g, '')))
+      : apiEnvelope;
     const normalized = { aiRows: payload.ai_results || [], hourlyRows: payload.hourly_predictions || [], dailyTotalRows: payload.daily_totals || [], stateData: payload.state || {}, health: { ...(payload.health || {}), source: 'live consolidated payload', generated_at: payload.generated_at } };
     saveCache(normalized);
     return normalized;
-  } catch (combinedError) {
+  } catch (apiError) {
+    try {
+      const payload = await fetchWithRetry(CONFIG.urls.dashboardData, true);
+      const normalized = { aiRows: payload.ai_results || [], hourlyRows: payload.hourly_predictions || [], dailyTotalRows: payload.daily_totals || [], stateData: payload.state || {}, health: { ...(payload.health || {}), source: 'live consolidated payload', generated_at: payload.generated_at } };
+      saveCache(normalized);
+      return normalized;
+    } catch (combinedError) {
     const [aiText, hourlyText, dailyTotalsText, stateData] = await Promise.all([
       fetchWithRetry(CONFIG.urls.aiResults),
       fetchWithRetry(CONFIG.urls.hourlyPredictions),
       fetchWithRetry(CONFIG.urls.dailyTotals),
       fetchWithRetry(CONFIG.urls.state, true),
     ]);
-    const normalized = { aiRows: parseCSV(aiText), hourlyRows: parseCSV(hourlyText), dailyTotalRows: parseCSV(dailyTotalsText), stateData, health: { collector_status: 'legacy payload', source: 'legacy files fallback', error: combinedError.message } };
+    const normalized = { aiRows: parseCSV(aiText), hourlyRows: parseCSV(hourlyText), dailyTotalRows: parseCSV(dailyTotalsText), stateData, health: { collector_status: 'legacy payload', source: 'legacy files fallback', error: `${apiError.message}; ${combinedError.message}` } };
     saveCache(normalized);
     return normalized;
+    }
   }
 }
 
