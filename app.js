@@ -300,14 +300,15 @@ function saveCache(data) {
    PROCESS DATA
 ══════════════════════════════════════════════════════════════════ */
 /**
- * Returns the latest row from ai_results.csv.
- * "Latest" = largest processed_at timestamp.
+ * Returns the latest calendar record from ai_results.csv.
+ * Processing timestamps can be identical after a historical repair, so the
+ * record date—not array order or processed_at—is authoritative for display.
  */
 function getLatestAiRow(rows) {
   if (!rows || rows.length === 0) return null;
   return rows.reduce((best, row) => {
     if (!best) return row;
-    return row.processed_at > best.processed_at ? row : best;
+    return String(row.date || '') > String(best.date || '') ? row : best;
   }, null);
 }
 
