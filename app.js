@@ -26,6 +26,7 @@ const CONFIG = {
   refreshInterval: 5 * 60 * 1000,   // 5 minutes
   timezone:        'Asia/Kolkata',
   maxRetries: 3,
+  requestTimeoutMs: 10000,
   cacheMaxAgeMs: 30 * 60 * 1000,
 };
 
@@ -258,7 +259,14 @@ async function fetchWithRetry(url, asJson = false) {
     for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
       try {
         const separator = candidate.includes('?') ? '&' : '?';
-        const res = await fetch(`${candidate}${separator}t=${Date.now()}`, { cache: 'no-store' });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), CONFIG.requestTimeoutMs);
+        let res;
+        try {
+          res = await fetch(`${candidate}${separator}t=${Date.now()}`, { cache: 'no-store', signal: controller.signal });
+        } finally {
+          clearTimeout(timeout);
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return asJson ? await res.json() : await res.text();
       } catch (err) {
@@ -267,7 +275,8 @@ async function fetchWithRetry(url, asJson = false) {
       }
     }
   }
-  throw new Error(`${lastError?.message || 'request failed'} (${url})`);
+  const reason = lastError?.name === 'AbortError' ? `request timed out after ${CONFIG.requestTimeoutMs / 1000}s` : (lastError?.message || 'request failed');
+  throw new Error(`${reason} (${url})`);
 }
 
 async function loadAllData() {
