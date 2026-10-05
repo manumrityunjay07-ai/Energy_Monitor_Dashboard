@@ -21,7 +21,7 @@ const CONFIG = {
     aiResults:         'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/ai_results.csv',
     dailyTotals:       'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/daily_totals.csv',
     hourlyPredictions: 'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/hourly_predictions.csv',
-    state:             'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/main/data/state.json',
+    state:             'https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/data/state.json',
   },
   refreshInterval: 5 * 60 * 1000,   // 5 minutes
   timezone:        'Asia/Kolkata',
