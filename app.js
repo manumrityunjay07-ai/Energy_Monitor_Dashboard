@@ -73,8 +73,6 @@ const UI = {
   // Chart & table
   hourlyTableBody:  $('hourly-table-body'),
   noActualNote:     $('no-actual-note'),
-  historyTableBody: $('history-table-body'),
-  historyDateSelect: $('history-date-select'),
   anomalyInvestigationList: $('anomaly-investigation-list'),
   suggestionsList:  $('suggestions-list'),
   collectorHealth:  $('collector-health'),
@@ -85,23 +83,13 @@ const UI = {
   currentDataStatus:$('current-data-status'),
   hourlyDataDate:   $('hourly-data-date'),
   hourlyChartSummary:$('hourly-chart-summary'),
-  dailyChartSummary: $('daily-chart-summary'),
   diagnosticStatus: $('pipeline-diagnostic-status'),
   diagnosticMessage:$('pipeline-diagnostic-message'),
-  historyCaption:   $('history-chart-caption'),
   dailyMAE:         $('daily-mae'),
   dailyRMSE:        $('daily-rmse'),
   hourlyMAE:        $('hourly-mae'),
   completedDays:    $('completed-days'),
   performanceNote:  $('performance-note'),
-  aiLearningStatus: $('ai-learning-status'),
-  aiLearningSamples: $('ai-learning-samples'),
-  aiBaselineMae: $('ai-baseline-mae'),
-  aiAdaptedMae: $('ai-adapted-mae'),
-  aiDifferenceKwh: $('ai-difference-kwh'),
-  aiImprovementPercent: $('ai-improvement-percent'),
-  aiRateComparison: $('ai-rate-comparison'),
-  aiImprovementMessage: $('ai-improvement-message'),
 };
 
 /* ══════════════════════════════════════════════════════════════════
@@ -704,6 +692,7 @@ function historyDataStatus(row) {
 }
 
 function renderHistory(aiRows, dailyTotalRows = []) {
+  if (!UI.historyTableBody) return;
   const byDate = new Map((aiRows || []).filter(row => row.date).map(row => [row.date, { ...row }]));
   (dailyTotalRows || []).forEach(total => {
     if (!total.date) return;
@@ -820,6 +809,7 @@ function renderHealth(stateData, health = {}, dailyTotalRows = []) {
 }
 
 function renderDailyChart(aiRows, dailyTotalRows = []) {
+  if (!document.getElementById('daily-history-chart')) return;
   const byDate = new Map((aiRows || []).filter(row => row.date).map(row => [row.date, { ...row }]));
   (dailyTotalRows || []).forEach(total => {
     if (!total.date) return;
@@ -857,6 +847,7 @@ function renderPerformance(aiRows) {
 }
 
 function renderAIImprovement(aiRows, stateData = {}) {
+  if (!UI.aiLearningStatus) return;
   const completed = (aiRows || []).filter(row => toFloat(row.actual_kwh) !== null).sort((a, b) => String(a.date).localeCompare(String(b.date)));
   const previous = completed.length ? completed[completed.length - 1] : null;
   const current = currentISTParts();
