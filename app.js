@@ -820,6 +820,7 @@ function renderHealth(stateData, health = {}, dailyTotalRows = []) {
 }
 
 function renderDailyChart(aiRows, dailyTotalRows = []) {
+  if (!document.getElementById('daily-history-chart')) return;
   const byDate = new Map((aiRows || []).filter(row => row.date).map(row => [row.date, { ...row }]));
   (dailyTotalRows || []).forEach(total => {
     if (!total.date) return;
@@ -857,6 +858,7 @@ function renderPerformance(aiRows) {
 }
 
 function renderAIImprovement(aiRows, stateData = {}) {
+  if (!UI.aiLearningStatus) return;
   const completed = (aiRows || []).filter(row => toFloat(row.actual_kwh) !== null).sort((a, b) => String(a.date).localeCompare(String(b.date)));
   const previous = completed.length ? completed[completed.length - 1] : null;
   const current = currentISTParts();
