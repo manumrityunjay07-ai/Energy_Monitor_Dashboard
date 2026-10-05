@@ -73,8 +73,6 @@ const UI = {
   // Chart & table
   hourlyTableBody:  $('hourly-table-body'),
   noActualNote:     $('no-actual-note'),
-  historyTableBody: $('history-table-body'),
-  historyDateSelect: $('history-date-select'),
   anomalyInvestigationList: $('anomaly-investigation-list'),
   suggestionsList:  $('suggestions-list'),
   collectorHealth:  $('collector-health'),
@@ -85,23 +83,13 @@ const UI = {
   currentDataStatus:$('current-data-status'),
   hourlyDataDate:   $('hourly-data-date'),
   hourlyChartSummary:$('hourly-chart-summary'),
-  dailyChartSummary: $('daily-chart-summary'),
   diagnosticStatus: $('pipeline-diagnostic-status'),
   diagnosticMessage:$('pipeline-diagnostic-message'),
-  historyCaption:   $('history-chart-caption'),
   dailyMAE:         $('daily-mae'),
   dailyRMSE:        $('daily-rmse'),
   hourlyMAE:        $('hourly-mae'),
   completedDays:    $('completed-days'),
   performanceNote:  $('performance-note'),
-  aiLearningStatus: $('ai-learning-status'),
-  aiLearningSamples: $('ai-learning-samples'),
-  aiBaselineMae: $('ai-baseline-mae'),
-  aiAdaptedMae: $('ai-adapted-mae'),
-  aiDifferenceKwh: $('ai-difference-kwh'),
-  aiImprovementPercent: $('ai-improvement-percent'),
-  aiRateComparison: $('ai-rate-comparison'),
-  aiImprovementMessage: $('ai-improvement-message'),
 };
 
 /* ══════════════════════════════════════════════════════════════════
