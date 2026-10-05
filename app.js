@@ -704,6 +704,7 @@ function historyDataStatus(row) {
 }
 
 function renderHistory(aiRows, dailyTotalRows = []) {
+  if (!UI.historyTableBody) return;
   const byDate = new Map((aiRows || []).filter(row => row.date).map(row => [row.date, { ...row }]));
   (dailyTotalRows || []).forEach(total => {
     if (!total.date) return;

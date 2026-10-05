@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Real-time energy consumption monitoring dashboard for Device 153. Tracks daily and hourly predicted and actual kWh usage with anomaly detection." />
   <title>Device 153 — Energy Monitoring Dashboard</title>
-  <meta name="dashboard-build" content="2026-10-05-r15" />
+  <meta name="dashboard-build" content="2026-10-05-r16" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -241,19 +241,6 @@
       </section>
 
       <section class="history-grid" aria-label="Historical records and suggestions">
-        <section class="card table-section" aria-label="Previous daily records">
-          <div class="table-section__header">
-            <h2 class="section-title">Previous Daily Records</h2>
-            <label class="section-hint">Inspect day <select id="history-date-select" aria-label="Select historical date"><option value="">All days</option></select></label>
-          </div>
-          <div class="table-wrap" role="region" aria-label="Previous daily records table" tabindex="0">
-            <table aria-live="polite">
-              <thead><tr><th>Date</th><th>Data status</th><th>Energy status</th><th>Actual kWh</th><th>Predicted kWh</th><th>Error kWh</th></tr></thead>
-              <tbody id="history-table-body"></tbody>
-            </table>
-          </div>
-        </section>
-
         <section class="card suggestions-card" aria-label="Automatic suggestions">
           <div class="table-section__header">
             <h2 class="section-title">Automatic Suggestions</h2>
@@ -287,6 +274,6 @@
   </div><!-- .app-shell -->
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-  <script src="app.js?v=20261005-r15"></script>
+  <script src="app.js?v=20261005-r16"></script>
 </body>
 </html>
