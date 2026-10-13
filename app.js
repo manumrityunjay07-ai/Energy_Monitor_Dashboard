@@ -395,16 +395,16 @@ function renderKPI(ai) {
 
   if (status === 'anomaly') {
     UI.kpiAnomalyStatus.textContent = '⚠ Anomaly';
-    UI.kpiAnomalyStatus.classList.add('status--anomaly');
+    UI.kpiAnomalyStatus?.classList.add('status--anomaly');
   } else if (status === 'normal') {
     UI.kpiAnomalyStatus.textContent = '✓ Normal';
-    UI.kpiAnomalyStatus.classList.add('status--normal');
+    UI.kpiAnomalyStatus?.classList.add('status--normal');
   } else if (status.includes('wait') || status.includes('complete') || status === '') {
     UI.kpiAnomalyStatus.textContent = '⏳ Waiting for complete day';
-    UI.kpiAnomalyStatus.classList.add('status--waiting');
+    UI.kpiAnomalyStatus?.classList.add('status--waiting');
   } else if (status === 'daily_total_only') {
     UI.kpiAnomalyStatus.textContent = 'Daily total only';
-    UI.kpiAnomalyStatus.classList.add('status--waiting');
+    UI.kpiAnomalyStatus?.classList.add('status--waiting');
   } else {
     UI.kpiAnomalyStatus.textContent = escapeAttr(ai.status) || '—';
   }
@@ -764,32 +764,32 @@ function renderAIImprovement(aiRows, stateData = {}) {
    UI STATE HELPERS
 ══════════════════════════════════════════════════════════════════ */
 function showLoading() {
-  UI.loadingOverlay.classList.remove('hidden');
-  UI.errorOverlay.classList.add('hidden');
-  UI.mainContent.classList.add('hidden');
-  UI.updateDot.className = 'update-dot update-dot--loading';
-  UI.refreshIcon.classList.add('btn-refresh__icon--spinning');
-  UI.lastUpdated.textContent = 'Loading…';
+  UI.loadingOverlay?.classList.remove('hidden');
+  UI.errorOverlay?.classList.add('hidden');
+  UI.mainContent?.classList.add('hidden');
+  if (UI.updateDot) UI.updateDot.className = 'update-dot update-dot--loading';
+  UI.refreshIcon?.classList.add('btn-refresh__icon--spinning');
+  if (UI.lastUpdated) UI.lastUpdated.textContent = 'Loading…';
 }
 
 function showError(msg) {
-  UI.loadingOverlay.classList.add('hidden');
-  UI.errorOverlay.classList.remove('hidden');
-  UI.mainContent.classList.add('hidden');
-  UI.updateDot.className = 'update-dot update-dot--error';
-  UI.refreshIcon.classList.remove('btn-refresh__icon--spinning');
+  UI.loadingOverlay?.classList.add('hidden');
+  UI.errorOverlay?.classList.remove('hidden');
+  UI.mainContent?.classList.add('hidden');
+  if (UI.updateDot) UI.updateDot.className = 'update-dot update-dot--error';
+  UI.refreshIcon?.classList.remove('btn-refresh__icon--spinning');
   // Use textContent to prevent XSS
-  UI.errorMessage.textContent = `Failed to load data: ${msg}. Check your internet connection and try again.`;
-  UI.lastUpdated.textContent = 'Error';
+  if (UI.errorMessage) UI.errorMessage.textContent = `Failed to load data: ${msg}. Check your internet connection and try again.`;
+  if (UI.lastUpdated) UI.lastUpdated.textContent = 'Error';
 }
 
 function showContent() {
-  UI.loadingOverlay.classList.add('hidden');
-  UI.errorOverlay.classList.add('hidden');
-  UI.mainContent.classList.remove('hidden');
-  UI.updateDot.className = 'update-dot';
-  UI.refreshIcon.classList.remove('btn-refresh__icon--spinning');
-  UI.lastUpdated.textContent = `Updated ${nowIST()} IST`;
+  UI.loadingOverlay?.classList.add('hidden');
+  UI.errorOverlay?.classList.add('hidden');
+  UI.mainContent?.classList.remove('hidden');
+  if (UI.updateDot) UI.updateDot.className = 'update-dot';
+  UI.refreshIcon?.classList.remove('btn-refresh__icon--spinning');
+  if (UI.lastUpdated) UI.lastUpdated.textContent = `Updated ${nowIST()} IST`;
 }
 
 /* ══════════════════════════════════════════════════════════════════
