@@ -160,6 +160,21 @@ function formatDisplayDate(dateStr) {
   return String(dateStr);
 }
 
+function getNextDay(dateStr) {
+  try {
+    const parts = String(dateStr).trim().split('-');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      d.setDate(d.getDate() + 1);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+  } catch {}
+  return dateStr;
+}
+
 /* ══════════════════════════════════════════════════════════════════
    UTILITY — CSV PARSER
 ══════════════════════════════════════════════════════════════════ */
@@ -375,17 +390,20 @@ function mergeLiveActuals(hourlyRows, stateData) {
 function renderKPI(ai) {
   if (!ai) return;
 
-  const recordDate = ai.date || 'latest completed day';
-  const displayDateStr = formatDisplayDate(recordDate);
+  const actualDate = ai.actual_date || ai.date || 'latest completed day';
+  const forecastDate = ai.forecast_date || (ai.date ? getNextDay(ai.date) : actualDate);
+
+  const displayActualDate = formatDisplayDate(actualDate);
+  const displayForecastDate = formatDisplayDate(forecastDate);
 
   // Address KPI cards cleanly
   UI.kpiPredictedLabel.textContent = 'Predicted Energy';
   UI.kpiActualLabel.textContent = 'Actual Energy';
   UI.kpiErrorLabel.textContent = 'Saved / Over used';
 
-  if (UI.kpiPredictedDate) UI.kpiPredictedDate.textContent = displayDateStr;
-  if (UI.kpiActualDate)    UI.kpiActualDate.textContent = displayDateStr;
-  if (UI.kpiErrorDate)     UI.kpiErrorDate.textContent = displayDateStr;
+  if (UI.kpiPredictedDate) UI.kpiPredictedDate.textContent = displayForecastDate;
+  if (UI.kpiActualDate)    UI.kpiActualDate.textContent = displayActualDate;
+  if (UI.kpiErrorDate)     UI.kpiErrorDate.textContent = displayActualDate;
 
   // Forward forecast associated with this completed record.
   const predicted = fmt(ai.prediction_kwh);
