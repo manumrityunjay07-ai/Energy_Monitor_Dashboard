@@ -378,12 +378,24 @@ function renderKPI(ai) {
     UI.kpiActualUnit.textContent = '';
   }
 
-  // Prediction error
-  const err = fmt(rowPredictionError(ai));
-  if (err !== null) {
-    UI.kpiError.textContent = err;
-    UI.kpiErrorUnit.textContent = 'kWh';
+  // Saved / Over used (Variance from forecast)
+  const errNum = toFloat(rowPredictionError(ai));
+  if (errNum !== null) {
+    if (errNum < -0.01) {
+      UI.kpiErrorLabel.textContent = `Saved vs Forecast — ${recordDate}`;
+      UI.kpiError.textContent = fmt(Math.abs(errNum));
+      UI.kpiErrorUnit.textContent = 'kWh saved';
+    } else if (errNum > 0.01) {
+      UI.kpiErrorLabel.textContent = `Over used vs Forecast — ${recordDate}`;
+      UI.kpiError.textContent = `+${fmt(errNum)}`;
+      UI.kpiErrorUnit.textContent = 'kWh over';
+    } else {
+      UI.kpiErrorLabel.textContent = `Saved / Over used — ${recordDate}`;
+      UI.kpiError.textContent = '0.00';
+      UI.kpiErrorUnit.textContent = 'kWh';
+    }
   } else {
+    UI.kpiErrorLabel.textContent = `Saved / Over used — ${recordDate}`;
     UI.kpiError.textContent = 'N/A';
     UI.kpiErrorUnit.textContent = '';
   }
@@ -472,7 +484,7 @@ function renderChart(hourlyRows, context = {}) {
 
   if (hasError) {
     datasets.push({
-      label:           'Error kWh',
+      label:           'Saved / Over used (kWh)',
       data:            error,
       borderColor:     'rgba(245,158,11,1)',
       backgroundColor: 'transparent',
@@ -609,8 +621,21 @@ function renderTable(hourlyRows, context = {}) {
     tr.appendChild(tdActual);
 
     const tdError = document.createElement('td');
-    tdError.classList.add(row.error !== null ? 'td-error' : 'td-na');
-    tdError.textContent = row.error !== null ? row.error.toFixed(2) : '—';
+    if (row.error !== null) {
+      if (row.error < -0.005) {
+        tdError.classList.add('td-actual');
+        tdError.textContent = `-${Math.abs(row.error).toFixed(2)} (Saved)`;
+      } else if (row.error > 0.005) {
+        tdError.classList.add('td-error');
+        tdError.textContent = `+${row.error.toFixed(2)} (Over used)`;
+      } else {
+        tdError.classList.add('td-actual');
+        tdError.textContent = '0.00';
+      }
+    } else {
+      tdError.classList.add('td-na');
+      tdError.textContent = '—';
+    }
     tr.appendChild(tdError);
 
     tbody.appendChild(tr);
