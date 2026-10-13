@@ -56,7 +56,6 @@ const UI = {
   kpiError:         $('kpi-error'),
   kpiErrorLabel:    $('kpi-error-label'),
   kpiErrorUnit:     $('kpi-error-unit'),
-  kpiAnomalyStatus: $('kpi-anomaly-status'),
 
   // Chart & table
   hourlyTableBody:  $('hourly-table-body'),
@@ -400,26 +399,6 @@ function renderKPI(ai) {
     UI.kpiErrorUnit.textContent = '';
   }
 
-  // Anomaly status
-  const status = (ai.status || '').toLowerCase().trim();
-  UI.kpiAnomalyStatus.textContent = '';
-  UI.kpiAnomalyStatus.className   = 'kpi-card__value kpi-card__value--status';
-
-  if (status === 'anomaly') {
-    UI.kpiAnomalyStatus.textContent = '⚠ Anomaly';
-    UI.kpiAnomalyStatus?.classList.add('status--anomaly');
-  } else if (status === 'normal') {
-    UI.kpiAnomalyStatus.textContent = '✓ Normal';
-    UI.kpiAnomalyStatus?.classList.add('status--normal');
-  } else if (status.includes('wait') || status.includes('complete') || status === '') {
-    UI.kpiAnomalyStatus.textContent = '⏳ Waiting for complete day';
-    UI.kpiAnomalyStatus?.classList.add('status--waiting');
-  } else if (status === 'daily_total_only') {
-    UI.kpiAnomalyStatus.textContent = 'Daily total only';
-    UI.kpiAnomalyStatus?.classList.add('status--waiting');
-  } else {
-    UI.kpiAnomalyStatus.textContent = escapeAttr(ai.status) || '—';
-  }
 }
 
 
