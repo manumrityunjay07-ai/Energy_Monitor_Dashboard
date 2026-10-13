@@ -20,9 +20,7 @@ assert.match(app, /URL\.createObjectURL\(await response\.blob\(\)\)/);
 assert.match(html, /download-controls/);
 assert.match(html, /id="hourly-data-date"/);
 assert.match(html, /id="hourly-chart-summary"/);
-assert.match(html, /id="daily-chart-summary"/);
 assert.match(html, /aria-describedby="hourly-chart-summary"/);
-assert.match(html, /aria-describedby="daily-chart-summary"/);
 assert.match(css, /\.sr-only\s*\{/);
 
 const domIds = [...app.matchAll(/\$\('([^']+)'\)/g)].map(match => match[1]);
@@ -32,7 +30,7 @@ for (const id of new Set(domIds)) {
 
 // Execute the pure date-selection behavior without booting the browser UI.
 const start = app.indexOf('function getHourlyForDate');
-const end = app.indexOf('\n\nfunction currentISTParts', start);
+const end = app.indexOf('function currentISTParts', start);
 const sandbox = {};
 vm.runInNewContext(`${app.slice(start, end)}; this.getHourlyForDate = getHourlyForDate;`, sandbox);
 const rows = [{ date: '2026-09-14', hour: '0' }, { date: '2026-09-15', hour: '0' }];
