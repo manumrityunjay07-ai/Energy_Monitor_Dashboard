@@ -50,12 +50,17 @@ const UI = {
   kpiPredicted:     $('kpi-predicted'),
   kpiPredictedLabel: $('kpi-predicted-label'),
   predictionRange:  $('prediction-range'),
+  kpiPredictedDate: $('kpi-predicted-date'),
   kpiActual:        $('kpi-actual'),
   kpiActualLabel:   $('kpi-actual-label'),
   kpiActualUnit:    $('kpi-actual-unit'),
+  kpiActualHint:    $('kpi-actual-hint'),
+  kpiActualDate:    $('kpi-actual-date'),
   kpiError:         $('kpi-error'),
   kpiErrorLabel:    $('kpi-error-label'),
   kpiErrorUnit:     $('kpi-error-unit'),
+  kpiErrorHint:     $('kpi-error-hint'),
+  kpiErrorDate:     $('kpi-error-date'),
 
   // Chart & table
   hourlyTableBody:  $('hourly-table-body'),
@@ -138,6 +143,21 @@ function hourLabel(h) {
   const suffix = n >= 12 ? 'PM' : 'AM';
   const h12    = n % 12 === 0 ? 12 : n % 12;
   return `${String(h12).padStart(2, '0')}:00 ${suffix}`;
+}
+
+function formatDisplayDate(dateStr) {
+  if (!dateStr || dateStr === 'latest completed day') return 'Latest day';
+  const parts = String(dateStr).trim().split('-');
+  if (parts.length === 3) {
+    const year = Number(parts[0]);
+    const month = Number(parts[1]) - 1;
+    const day = Number(parts[2]);
+    const d = new Date(year, month, day);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+  }
+  return String(dateStr);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -356,9 +376,16 @@ function renderKPI(ai) {
   if (!ai) return;
 
   const recordDate = ai.date || 'latest completed day';
-  UI.kpiPredictedLabel.textContent = `Forecast after ${recordDate}`;
-  UI.kpiActualLabel.textContent = `Actual — ${recordDate}`;
-  UI.kpiErrorLabel.textContent = `Prediction Error — ${recordDate}`;
+  const displayDateStr = formatDisplayDate(recordDate);
+
+  // Address KPI cards cleanly
+  UI.kpiPredictedLabel.textContent = 'Predicted Energy';
+  UI.kpiActualLabel.textContent = 'Actual Energy';
+  UI.kpiErrorLabel.textContent = 'Saved / Over used';
+
+  if (UI.kpiPredictedDate) UI.kpiPredictedDate.textContent = displayDateStr;
+  if (UI.kpiActualDate)    UI.kpiActualDate.textContent = displayDateStr;
+  if (UI.kpiErrorDate)     UI.kpiErrorDate.textContent = displayDateStr;
 
   // Forward forecast associated with this completed record.
   const predicted = fmt(ai.prediction_kwh);
@@ -372,33 +399,34 @@ function renderKPI(ai) {
   if (actual !== null) {
     UI.kpiActual.textContent = actual;
     UI.kpiActualUnit.textContent = 'kWh';
+    if (UI.kpiActualHint) UI.kpiActualHint.textContent = '24h recorded total';
   } else {
     UI.kpiActual.textContent = 'Pending';
     UI.kpiActualUnit.textContent = '';
+    if (UI.kpiActualHint) UI.kpiActualHint.textContent = 'Awaiting daily summary';
   }
 
   // Saved / Over used (Variance from forecast)
   const errNum = toFloat(rowPredictionError(ai));
   if (errNum !== null) {
     if (errNum < -0.01) {
-      UI.kpiErrorLabel.textContent = `Saved vs Forecast — ${recordDate}`;
       UI.kpiError.textContent = fmt(Math.abs(errNum));
       UI.kpiErrorUnit.textContent = 'kWh saved';
+      if (UI.kpiErrorHint) UI.kpiErrorHint.textContent = `${fmt(Math.abs(errNum))} kWh below forecast`;
     } else if (errNum > 0.01) {
-      UI.kpiErrorLabel.textContent = `Over used vs Forecast — ${recordDate}`;
       UI.kpiError.textContent = `+${fmt(errNum)}`;
       UI.kpiErrorUnit.textContent = 'kWh over';
+      if (UI.kpiErrorHint) UI.kpiErrorHint.textContent = `${fmt(errNum)} kWh above forecast`;
     } else {
-      UI.kpiErrorLabel.textContent = `Saved / Over used — ${recordDate}`;
       UI.kpiError.textContent = '0.00';
       UI.kpiErrorUnit.textContent = 'kWh';
+      if (UI.kpiErrorHint) UI.kpiErrorHint.textContent = 'Exact match with forecast';
     }
   } else {
-    UI.kpiErrorLabel.textContent = `Saved / Over used — ${recordDate}`;
     UI.kpiError.textContent = 'N/A';
     UI.kpiErrorUnit.textContent = '';
+    if (UI.kpiErrorHint) UI.kpiErrorHint.textContent = 'Awaiting forecast calculation';
   }
-
 }
 
 

@@ -83,10 +83,11 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           </div>
           <div class="kpi-card__body">
-            <span class="kpi-card__label" id="kpi-predicted-label">Forecast</span>
+            <span class="kpi-card__label" id="kpi-predicted-label">Predicted Energy</span>
             <span class="kpi-card__value" id="kpi-predicted">—</span>
             <span class="kpi-card__unit">kWh</span>
             <span class="kpi-card__range" id="prediction-range">Expected range: —</span>
+            <span class="kpi-card__date" id="kpi-predicted-date">—</span>
           </div>
         </article>
 
@@ -95,9 +96,11 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12M12 12L7 7M12 12l5-5"/><circle cx="12" cy="5" r="3"/></svg>
           </div>
           <div class="kpi-card__body">
-            <span class="kpi-card__label" id="kpi-actual-label">Actual</span>
+            <span class="kpi-card__label" id="kpi-actual-label">Actual Energy</span>
             <span class="kpi-card__value" id="kpi-actual">—</span>
             <span class="kpi-card__unit" id="kpi-actual-unit">kWh</span>
+            <span class="kpi-card__range" id="kpi-actual-hint">24h recorded total</span>
+            <span class="kpi-card__date" id="kpi-actual-date">—</span>
           </div>
         </article>
 
@@ -109,6 +112,8 @@
             <span class="kpi-card__label" id="kpi-error-label">Saved / Over used</span>
             <span class="kpi-card__value" id="kpi-error">—</span>
             <span class="kpi-card__unit" id="kpi-error-unit">kWh</span>
+            <span class="kpi-card__range" id="kpi-error-hint">Variance vs forecast</span>
+            <span class="kpi-card__date" id="kpi-error-date">—</span>
           </div>
         </article>
 
@@ -191,12 +196,12 @@
 
     <!-- ── Footer ─────────────────────────────────────────────────── -->
     <footer class="site-footer">
-      <span>Device 153 Energy Monitor &nbsp;·&nbsp; Build 2026-10-13-r5 &nbsp;·&nbsp; Data refreshes every 5 minutes &nbsp;·&nbsp; Times in IST (Asia/Kolkata)</span>
+      <span>Device 153 Energy Monitor &nbsp;·&nbsp; Build 2026-10-13-r6 &nbsp;·&nbsp; Data refreshes every 5 minutes &nbsp;·&nbsp; Times in IST (Asia/Kolkata)</span>
     </footer>
 
   </div><!-- .app-shell -->
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-  <script src="app.js?v=20261013-r5"></script>
+  <script src="app.js?v=20261013-r6"></script>
 </body>
 </html>
