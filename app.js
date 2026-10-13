@@ -790,7 +790,14 @@ function renderDailyChart(aiRows, dailyTotalRows = []) {
   const chartData = { labels: rows.map(row => formatDisplayDate(row.date)), datasets: [
     { label: 'Actual kWh', data: rows.map(row => toFloat(row.actual_kwh)), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.12)', tension: .35, spanGaps: true },
     { label: 'Forecast kWh', data: rows.map(row => toFloat(row.previous_prediction_kwh)), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.10)', tension: .35, spanGaps: true },
-    { label: 'Baseline kWh', data: rows.map(row => toFloat(row.base_prediction_kwh)), borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,.08)', borderDash: [6, 4], tension: .35, spanGaps: true },
+    { label: 'Baseline kWh', data: rows.map(row => {
+        const prev = toFloat(row.previous_prediction_kwh);
+        const corr = toFloat(row.correction_kwh) || 0;
+        if (prev !== null) return Number((prev - corr).toFixed(2));
+        const base = toFloat(row.base_prediction_kwh);
+        if (base !== null) return base;
+        return toFloat(row.actual_kwh);
+      }), borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,.08)', borderDash: [6, 4], tension: .35, spanGaps: true },
   ] };
   const options = {
     responsive: true,
