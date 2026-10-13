@@ -58,18 +58,6 @@ const UI = {
   kpiErrorUnit:     $('kpi-error-unit'),
   kpiAnomalyStatus: $('kpi-anomaly-status'),
 
-  // Anomaly strip
-  anomalyScore:     $('anomaly-score'),
-  anomalyThreshold: $('anomaly-threshold'),
-  anomalyMAE:       $('anomaly-mae'),
-  anomalyCluster:   $('anomaly-cluster'),
-  dataDate:         $('data-date'),
-  anomalyBarFill:   $('anomaly-bar-fill'),
-  anomalyBarThresh: $('anomaly-bar-threshold'),
-  anomalyBarTrack:  $('anomaly-bar-track'),
-  barThreshLabel:   $('bar-threshold-label'),
-  barMaxLabel:      $('bar-max-label'),
-
   // Chart & table
   hourlyTableBody:  $('hourly-table-body'),
   noActualNote:     $('no-actual-note'),
@@ -82,8 +70,6 @@ const UI = {
   currentDataStatus:$('current-data-status'),
   hourlyDataDate:   $('hourly-data-date'),
   hourlyChartSummary:$('hourly-chart-summary'),
-  diagnosticStatus: $('pipeline-diagnostic-status'),
-  diagnosticMessage:$('pipeline-diagnostic-message'),
 };
 
 /* ══════════════════════════════════════════════════════════════════
@@ -424,49 +410,6 @@ function renderKPI(ai) {
   }
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   RENDER — ANOMALY STRIP
-══════════════════════════════════════════════════════════════════ */
-function renderAnomalyStrip(ai) {
-  if (!ai) {
-    UI.anomalyBarFill.style.width = '0%';
-    UI.anomalyBarThresh.style.left = '0%';
-    UI.barThreshLabel.textContent = 'Threshold —';
-    UI.barMaxLabel.textContent = 'Max —';
-    return;
-  }
-
-  const score     = toFloat(ai.anomaly_score);
-  const threshold = toFloat(ai.anomaly_threshold);
-  UI.anomalyBarFill.classList.remove('anomaly-bar-fill--danger');
-
-  UI.anomalyScore.textContent     = score     !== null ? score.toFixed(4)     : '—';
-  UI.anomalyThreshold.textContent = threshold !== null ? threshold.toFixed(4) : '—';
-  UI.anomalyMAE.textContent       = toFloat(ai.hourly_error_mae) !== null
-    ? toFloat(ai.hourly_error_mae).toFixed(3) : '—';
-  UI.anomalyCluster.textContent   = ai.cluster !== '' ? escapeAttr(ai.cluster) : '—';
-  UI.dataDate.textContent         = ai.date    !== '' ? escapeAttr(ai.date)    : '—';
-
-  // Progress bar
-  if (score !== null && threshold !== null) {
-    const maxVal  = Math.max(Math.max(score, threshold) * 1.4, 1e-9);
-    const fillPct = Math.min((score / maxVal) * 100, 100);
-    const threshPct = Math.min((threshold / maxVal) * 100, 100);
-
-    UI.anomalyBarFill.style.width  = `${fillPct.toFixed(1)}%`;
-    UI.anomalyBarThresh.style.left = `${threshPct.toFixed(1)}%`;
-    UI.anomalyBarTrack.setAttribute('aria-valuenow', fillPct.toFixed(0));
-
-    UI.barThreshLabel.textContent = `Threshold ${threshold.toFixed(2)}`;
-    UI.barMaxLabel.textContent    = `Max ~${maxVal.toFixed(2)}`;
-
-    if (score > threshold) {
-      UI.anomalyBarFill.classList.add('anomaly-bar-fill--danger');
-    } else {
-      UI.anomalyBarFill.classList.remove('anomaly-bar-fill--danger');
-    }
-  }
-}
 
 /* ══════════════════════════════════════════════════════════════════
    RENDER — CHART
@@ -758,17 +701,6 @@ function renderHealth(stateData, health = {}, dailyTotalRows = []) {
   UI.currentDataStatus.textContent = completedHours != null ? `${qualityStatus} · ${completedHours} completed hours` : qualityStatus;
   UI.currentDataStatus.className = qualityStatus === 'complete' ? 'health-good' : 'health-warn';
   const missing = Array.isArray(health.missing_hours) && health.missing_hours.length ? `Missing hours: ${health.missing_hours.join(', ')}.` : 'All returned hours passed validation.';
-  const learning = health.learning_samples ?? '—';
-  UI.diagnosticStatus.textContent = healthy ? 'Operational' : 'Needs attention';
-  UI.diagnosticStatus.className = healthy ? 'health-good' : 'health-warn';
-  const quality = health.data_quality?.score != null ? ` Data quality: ${health.data_quality.score}%.` : '';
-  const source = health.source ? ` Source: ${health.source}.` : '';
-  const learningState = health.learning_status ? ` Learning status: ${health.learning_status}.` : '';
-  const timestamps = health.daily_total_collection_at ? ` Daily totals: ${formatISOtoIST(health.daily_total_collection_at)}; payload: ${formatISOtoIST(health.dashboard_payload_generated_at)}.` : '';
-  const coverage = health.confidence_coverage?.rate != null ? ` Confidence interval coverage: ${(health.confidence_coverage.rate * 100).toFixed(1)}% (${health.confidence_coverage.evaluated} evaluated).` : '';
-  const model = health.model_evaluation?.mae_kwh != null ? ` Model MAE: ${health.model_evaluation.mae_kwh.toFixed(2)} kWh; RMSE: ${health.model_evaluation.rmse_kwh.toFixed(2)} kWh.` : '';
-  const rollback = health.rollback_guard?.adaptation_enabled === false ? ' Adaptation rollback guard is active.' : '';
-  UI.diagnosticMessage.textContent = `${missing} Automatic calibration has ${learning} completed learning sample${learning === 1 ? '' : 's'}.${quality}${learningState}${source}${timestamps}${coverage}${model}${rollback} ${health.error ? `Last error: ${health.error}` : ''}`.trim();
 }
 
 function renderDailyChart(aiRows, dailyTotalRows = []) {
@@ -878,7 +810,6 @@ async function refresh() {
       : getHourlyForDate(hourlyRows, hourlyContext.date);
 
     renderKPI(displayAI);
-    renderAnomalyStrip(displayAI);
     renderChart(hourlyToday, hourlyContext);
     renderTable(hourlyToday, hourlyContext);
     renderAnomalyInvestigation(hourlyToday);
@@ -905,7 +836,6 @@ async function refresh() {
           ? mergeLiveActuals(getHourlyForDate(cached.hourlyRows, hourlyContext.date), cached.stateData)
           : getHourlyForDate(cached.hourlyRows, hourlyContext.date);
         renderKPI(displayAI);
-        renderAnomalyStrip(displayAI);
         renderChart(hourlyToday, hourlyContext);
         renderTable(hourlyToday, hourlyContext);
         renderAnomalyInvestigation(hourlyToday);
