@@ -74,7 +74,6 @@ const UI = {
   hourlyTableBody:  $('hourly-table-body'),
   noActualNote:     $('no-actual-note'),
   anomalyInvestigationList: $('anomaly-investigation-list'),
-  suggestionsList:  $('suggestions-list'),
   collectorHealth:  $('collector-health'),
   collectorLastRun: $('collector-last-run'),
   recordsCount:     $('records-count'),
@@ -85,11 +84,6 @@ const UI = {
   hourlyChartSummary:$('hourly-chart-summary'),
   diagnosticStatus: $('pipeline-diagnostic-status'),
   diagnosticMessage:$('pipeline-diagnostic-message'),
-  dailyMAE:         $('daily-mae'),
-  dailyRMSE:        $('daily-rmse'),
-  hourlyMAE:        $('hourly-mae'),
-  completedDays:    $('completed-days'),
-  performanceNote:  $('performance-note'),
 };
 
 /* ══════════════════════════════════════════════════════════════════
@@ -747,37 +741,6 @@ function renderAnomalyInvestigation(hourlyRows) {
   rows.forEach(row => { const li = document.createElement('li'); const direction = row.deviation >= 0 ? 'above' : 'below'; li.textContent = `${hourLabel(row.hour)}: actual ${row.actual.toFixed(2)} kWh, expected ${row.expected.toFixed(2)} kWh — ${Math.abs(row.deviation).toFixed(2)} kWh (${Math.abs(row.percent || 0).toFixed(1)}%) ${direction} expected.`; UI.anomalyInvestigationList.appendChild(li); });
 }
 
-function renderSuggestions(aiRows, hourlyRows) {
-  const list = UI.suggestionsList;
-  list.textContent = '';
-  const suggestions = [];
-  const completed = (aiRows || []).filter(row => toFloat(row.actual_kwh) !== null);
-  const latest = completed[completed.length - 1];
-  if (!completed.length) {
-    suggestions.push('Keep the collector running until more complete daily records are available.');
-  } else {
-    const errors = completed.map(row => toFloat(row.prediction_error_kwh)).filter(v => v !== null);
-    if (errors.length) {
-      const mean = errors.reduce((sum, value) => sum + value, 0) / errors.length;
-      suggestions.push(mean > 0 ? `Recent forecasts are underestimating by about ${mean.toFixed(2)} kWh on average.`
-        : `Recent forecasts are overestimating by about ${Math.abs(mean).toFixed(2)} kWh on average.`);
-    }
-    if (latest?.status?.toLowerCase() === 'anomaly') suggestions.push(`Review ${latest.date}: the daily profile was flagged as anomalous.`);
-    else suggestions.push('The latest completed daily profile is within the learned normal range.');
-    if (latest?.anomaly_explanation) suggestions.push(`Profile explanation: ${latest.anomaly_explanation}`);
-    if (latest?.profile_mode) suggestions.push(`Forecast profile: ${latest.profile_mode}.`);
-  }
-  const actuals = (hourlyRows || []).map(row => ({ hour: Number(row.hour), actual: toFloat(row.actual_kwh) }))
-    .filter(row => row.actual !== null).sort((a, b) => b.actual - a.actual);
-  if (actuals.length) suggestions.push(`Highest completed-hour consumption is around ${hourLabel(actuals[0].hour)} (${actuals[0].actual.toFixed(2)} kWh).`);
-  suggestions.push('Use the hourly table to compare completed hours and investigate repeated large errors.');
-  for (const text of suggestions) {
-    const li = document.createElement('li');
-    li.textContent = text;
-    list.appendChild(li);
-  }
-}
-
 function renderHealth(stateData, health = {}, dailyTotalRows = []) {
   const lastRun = stateData?.last_run;
   UI.collectorLastRun.textContent = formatISOtoIST(lastRun);
@@ -831,19 +794,6 @@ function renderDailyChart(aiRows, dailyTotalRows = []) {
   const options = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { color: '#94a3b8' } } }, scales: { x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,.05)' } }, y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,.05)' }, title: { display: true, text: 'Energy (kWh)', color: '#64748b' } } } };
   if (dailyChart) { dailyChart.data = chartData; dailyChart.options = options; dailyChart.update(); }
   else dailyChart = new Chart(document.getElementById('daily-history-chart').getContext('2d'), { type: 'line', data: chartData, options });
-}
-
-function renderPerformance(aiRows) {
-  const rows = (aiRows || []).map(row => ({ error: toFloat(row.prediction_error_kwh), hourly: toFloat(row.hourly_error_mae) })).filter(row => row.error !== null);
-  const abs = rows.map(row => Math.abs(row.error));
-  const mae = abs.length ? abs.reduce((a, b) => a + b, 0) / abs.length : null;
-  const rmse = abs.length ? Math.sqrt(rows.reduce((sum, row) => sum + row.error ** 2, 0) / rows.length) : null;
-  const hourly = rows.map(row => row.hourly).filter(v => v !== null);
-  UI.dailyMAE.textContent = mae === null ? '—' : mae.toFixed(2);
-  UI.dailyRMSE.textContent = rmse === null ? '—' : rmse.toFixed(2);
-  UI.hourlyMAE.textContent = hourly.length ? (hourly.reduce((a, b) => a + b, 0) / hourly.length).toFixed(2) : '—';
-  UI.completedDays.textContent = String(rows.length);
-  UI.performanceNote.textContent = rows.length >= 3 ? 'Metrics are based on completed forecast cycles.' : 'More completed forecast cycles are needed for reliable performance metrics.';
 }
 
 function renderAIImprovement(aiRows, stateData = {}) {
@@ -933,10 +883,8 @@ async function refresh() {
     renderTable(hourlyToday, hourlyContext);
     renderAnomalyInvestigation(hourlyToday);
     renderHistory(aiRows, dailyTotalRows);
-    renderSuggestions(aiRows, hourlyToday);
     renderHealth(stateData, health, dailyTotalRows);
     renderDailyChart(aiRows, dailyTotalRows);
-    renderPerformance(aiRows);
     renderAIImprovement(aiRows, stateData);
 
     showContent();
@@ -962,10 +910,8 @@ async function refresh() {
         renderTable(hourlyToday, hourlyContext);
         renderAnomalyInvestigation(hourlyToday);
         renderHistory(cached.aiRows, cached.dailyTotalRows);
-        renderSuggestions(cached.aiRows, hourlyToday);
         renderHealth(cached.stateData, { ...(cached.health || {}), collector_status: 'degraded', source: 'cached payload', error: `${err.message}; showing cached data` }, cached.dailyTotalRows || []);
         renderDailyChart(cached.aiRows, cached.dailyTotalRows);
-        renderPerformance(cached.aiRows);
         renderAIImprovement(cached.aiRows, cached.stateData);
         showContent();
         UI.lastUpdated.textContent = `Showing cached data · ${nowIST()} IST`;
