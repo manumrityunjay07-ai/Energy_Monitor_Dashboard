@@ -120,25 +120,50 @@
 
       </section>
 
-      <!-- Chart section -->
+      <!-- Collector health and controls -->
       <section class="card health-strip" aria-label="Collector health and date controls">
-        <div><span class="health-label">Collector</span><strong id="collector-health">Checking…</strong></div>
-        <div><span class="health-label">Latest collection</span><strong id="collector-last-run">—</strong></div>
-        <div><span class="health-label">Records available</span><strong id="records-count">—</strong></div>
-        <div><span class="health-label">Data freshness</span><strong id="data-freshness">—</strong></div>
-        <div><span class="health-label">API latency</span><strong id="api-latency">—</strong></div>
-        <div><span class="health-label">Current data status</span><strong id="current-data-status">—</strong></div>
-        <div class="range-controls" role="group" aria-label="History range">
-          <button class="range-btn is-active" data-days="7">7 days</button>
-          <button class="range-btn" data-days="14">14 days</button>
-          <button class="range-btn" data-days="30">30 days</button>
+        <div class="health-metrics-grid">
+          <div class="health-metric"><span class="health-label">Collector</span><strong id="collector-health">Checking…</strong></div>
+          <div class="health-metric"><span class="health-label">Latest collection</span><strong id="collector-last-run">—</strong></div>
+          <div class="health-metric"><span class="health-label">Records available</span><strong id="records-count">—</strong></div>
+          <div class="health-metric"><span class="health-label">Data freshness</span><strong id="data-freshness">—</strong></div>
+          <div class="health-metric"><span class="health-label">API latency</span><strong id="api-latency">—</strong></div>
+          <div class="health-metric"><span class="health-label">Current data status</span><strong id="current-data-status">—</strong></div>
         </div>
-        <div class="download-controls" aria-label="Download data">
-          <a href="https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/daily_totals.csv" download="daily_totals.csv" target="_blank" rel="noopener">Daily CSV</a>
-          <a href="https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/hourly_predictions.csv" download="hourly_predictions.csv" target="_blank" rel="noopener">Hourly CSV</a>
-          <a href="https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/health.json" download="health.json" target="_blank" rel="noopener">Health JSON</a>
-          <a href="https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/dashboard_data.json" download="dashboard_data.json" target="_blank" rel="noopener">All Data</a>
+        <div class="health-actions-bar">
+          <div class="range-controls" role="group" aria-label="History range">
+            <span class="action-bar-label">Trend History:</span>
+            <button class="range-btn is-active" data-days="7">7 days</button>
+            <button class="range-btn" data-days="14">14 days</button>
+            <button class="range-btn" data-days="30">30 days</button>
+          </div>
+          <div class="download-controls" aria-label="Download data">
+            <span class="action-bar-label">Export Data:</span>
+            <a href="https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/daily_totals.csv" download="daily_totals.csv" target="_blank" rel="noopener">Daily CSV</a>
+            <a href="https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/hourly_predictions.csv" download="hourly_predictions.csv" target="_blank" rel="noopener">Hourly CSV</a>
+            <a href="https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/health.json" download="health.json" target="_blank" rel="noopener">Health JSON</a>
+            <a href="https://raw.githubusercontent.com/manumrityunjay07-ai/Energy_Monitor_HTTP/live-data/results/dashboard_data.json" download="dashboard_data.json" target="_blank" rel="noopener">All Data</a>
+          </div>
         </div>
+      </section>
+
+      <!-- Daily Trend Chart section -->
+      <section class="card chart-section" aria-label="Daily energy history trend">
+        <div class="chart-section__header">
+          <div>
+            <h2 class="section-title">Daily Energy History Trend</h2>
+            <span class="section-hint" id="history-caption">Last 7 days</span>
+          </div>
+          <div class="chart-legend" aria-hidden="true">
+            <span class="legend-dot legend-dot--actual"></span><span>Actual</span>
+            <span class="legend-dot legend-dot--predicted"></span><span>Forecast</span>
+            <span class="legend-dot legend-dot--baseline"></span><span>Baseline</span>
+          </div>
+        </div>
+        <div class="chart-wrap chart-wrap--daily">
+          <canvas id="daily-history-chart" aria-label="Daily energy history chart" aria-describedby="daily-chart-summary"></canvas>
+        </div>
+        <p class="sr-only" id="daily-chart-summary">Daily energy history chart.</p>
       </section>
 
       <section class="card chart-section" aria-label="24-hour hourly energy chart">
@@ -196,12 +221,12 @@
 
     <!-- ── Footer ─────────────────────────────────────────────────── -->
     <footer class="site-footer">
-      <span>Device 153 Energy Monitor &nbsp;·&nbsp; Build 2026-10-13-r7 &nbsp;·&nbsp; Data refreshes every 5 minutes &nbsp;·&nbsp; Times in IST (Asia/Kolkata)</span>
+      <span>Device 153 Energy Monitor &nbsp;·&nbsp; Build 2026-10-13-r8 &nbsp;·&nbsp; Data refreshes every 5 minutes &nbsp;·&nbsp; Times in IST (Asia/Kolkata)</span>
     </footer>
 
   </div><!-- .app-shell -->
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-  <script src="app.js?v=20261013-r7"></script>
+  <script src="app.js?v=20261013-r8"></script>
 </body>
 </html>

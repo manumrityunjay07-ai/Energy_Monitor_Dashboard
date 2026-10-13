@@ -508,6 +508,7 @@ body {
 .legend-dot--predicted { background: var(--color-blue); box-shadow: 0 0 6px var(--color-blue-glow); }
 .legend-dot--actual    { background: var(--color-green); box-shadow: 0 0 6px var(--color-green-glow); }
 .legend-dot--error     { background: var(--color-amber); box-shadow: 0 0 6px var(--color-amber-glow); }
+.legend-dot--baseline  { background: #a78bfa; box-shadow: 0 0 6px rgba(167,139,250,0.5); }
 
 .chart-wrap {
   position: relative;

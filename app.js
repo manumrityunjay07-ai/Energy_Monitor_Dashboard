@@ -74,6 +74,8 @@ const UI = {
   currentDataStatus:$('current-data-status'),
   hourlyDataDate:   $('hourly-data-date'),
   hourlyChartSummary:$('hourly-chart-summary'),
+  historyCaption:   $('history-caption'),
+  dailyChartSummary: $('daily-chart-summary'),
 };
 
 /* ══════════════════════════════════════════════════════════════════
@@ -224,6 +226,20 @@ function splitCSVLine(line) {
   }
   result.push(current);
   return result;
+}
+
+function convertToCSV(rows) {
+  if (!rows || !rows.length) return '';
+  const headers = Object.keys(rows[0]);
+  const lines = [headers.join(',')];
+  for (const row of rows) {
+    lines.push(headers.map(h => {
+      const v = row[h] ?? '';
+      const str = String(v);
+      return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str.replace(/"/g, '""')}"` : str;
+    }).join(','));
+  }
+  return lines.join('\n');
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -754,7 +770,8 @@ function renderHealth(stateData, health = {}, dailyTotalRows = []) {
 }
 
 function renderDailyChart(aiRows, dailyTotalRows = []) {
-  if (!document.getElementById('daily-history-chart')) return;
+  const canvas = document.getElementById('daily-history-chart');
+  if (!canvas) return;
   const byDate = new Map((aiRows || []).filter(row => row.date).map(row => [row.date, { ...row }]));
   (dailyTotalRows || []).forEach(total => {
     if (!total.date) return;
@@ -764,18 +781,53 @@ function renderDailyChart(aiRows, dailyTotalRows = []) {
   });
   const rows = [...byDate.values()].filter(row => toFloat(row.actual_kwh) !== null || toFloat(row.previous_prediction_kwh) !== null)
     .sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-historyDays);
-  UI.historyCaption.textContent = `Last ${historyDays} days`;
-  UI.dailyChartSummary.textContent = rows.length
-    ? `Daily energy history for ${rows[0].date} through ${rows[rows.length - 1].date}, showing actual and forecast values.`
-    : 'No daily historical records are available.';
-  const chartData = { labels: rows.map(row => row.date), datasets: [
+  if (UI.historyCaption) UI.historyCaption.textContent = `Last ${historyDays} days (${rows.length} records)`;
+  if (UI.dailyChartSummary) {
+    UI.dailyChartSummary.textContent = rows.length
+      ? `Daily energy history for ${rows[0].date} through ${rows[rows.length - 1].date}, showing actual and forecast values.`
+      : 'No daily historical records are available.';
+  }
+  const chartData = { labels: rows.map(row => formatDisplayDate(row.date)), datasets: [
     { label: 'Actual kWh', data: rows.map(row => toFloat(row.actual_kwh)), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.12)', tension: .35, spanGaps: true },
-    { label: 'Evaluated forecast kWh', data: rows.map(row => toFloat(row.previous_prediction_kwh)), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.10)', tension: .35, spanGaps: true },
-    { label: 'Baseline forecast kWh', data: rows.map(row => toFloat(row.base_prediction_kwh)), borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,.08)', borderDash: [6, 4], tension: .35, spanGaps: true },
+    { label: 'Forecast kWh', data: rows.map(row => toFloat(row.previous_prediction_kwh)), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.10)', tension: .35, spanGaps: true },
+    { label: 'Baseline kWh', data: rows.map(row => toFloat(row.base_prediction_kwh)), borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,.08)', borderDash: [6, 4], tension: .35, spanGaps: true },
   ] };
-  const options = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { color: '#94a3b8' } } }, scales: { x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,.05)' } }, y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,.05)' }, title: { display: true, text: 'Energy (kWh)', color: '#64748b' } } } };
-  if (dailyChart) { dailyChart.data = chartData; dailyChart.options = options; dailyChart.update(); }
-  else dailyChart = new Chart(document.getElementById('daily-history-chart').getContext('2d'), { type: 'line', data: chartData, options });
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(14,22,35,0.95)',
+        borderColor:     'rgba(255,255,255,0.1)',
+        borderWidth:     1,
+        titleColor:      '#e2e8f0',
+        bodyColor:       '#94a3b8',
+        padding:         12,
+        titleFont:       { family: "'Inter', sans-serif", size: 12, weight: '600' },
+        bodyFont:        { family: "'Inter', sans-serif", size: 11 },
+        callbacks: {
+          label(ctx) {
+            const v = ctx.parsed.y;
+            if (v === null || v === undefined) return `${ctx.dataset.label}: N/A`;
+            return `${ctx.dataset.label}: ${v.toFixed(2)} kWh`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,.05)' } },
+      y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,.05)' }, title: { display: true, text: 'Energy (kWh)', color: '#64748b' } }
+    }
+  };
+  if (dailyChart) {
+    dailyChart.data = chartData;
+    dailyChart.options = options;
+    dailyChart.update('active');
+  } else {
+    dailyChart = new Chart(canvas.getContext('2d'), { type: 'line', data: chartData, options });
+  }
 }
 
 function renderAIImprovement(aiRows, stateData = {}) {
@@ -928,8 +980,25 @@ async function handleDataDownload(event) {
   link.classList.add('is-downloading');
   try {
     const separator = url.includes('?') ? '&' : '?';
-    const response = await fetch(`${url}${separator}download=${Date.now()}`, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    let response;
+    try {
+      response = await fetch(`${url}${separator}download=${Date.now()}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    } catch {
+      // In-memory fallback if GitHub raw link fails or rate-limits
+      let blob;
+      if (filename.includes('daily') && activePayload?.dailyTotalRows?.length) {
+        blob = new Blob([convertToCSV(activePayload.dailyTotalRows)], { type: 'text/csv' });
+      } else if (filename.includes('hourly') && activePayload?.hourlyRows?.length) {
+        blob = new Blob([convertToCSV(activePayload.hourlyRows)], { type: 'text/csv' });
+      } else if (filename.includes('health') && activePayload?.health) {
+        blob = new Blob([JSON.stringify(activePayload.health, null, 2)], { type: 'application/json' });
+      } else if (activePayload) {
+        blob = new Blob([JSON.stringify(activePayload, null, 2)], { type: 'application/json' });
+      }
+      if (blob) response = new Response(blob, { status: 200 });
+    }
+    if (!response) throw new Error('No data available for export');
     const blobUrl = URL.createObjectURL(await response.blob());
     const downloadLink = document.createElement('a');
     downloadLink.href = blobUrl;
@@ -956,7 +1025,11 @@ document.querySelectorAll('.range-btn').forEach(button => {
   button.addEventListener('click', () => {
     historyDays = Number(button.dataset.days) || 7;
     document.querySelectorAll('.range-btn').forEach(item => item.classList.toggle('is-active', item === button));
-    refresh();
+    if (activePayload?.aiRows?.length) {
+      renderDailyChart(activePayload.aiRows, activePayload.dailyTotalRows);
+    } else {
+      refresh();
+    }
   });
 });
 document.querySelectorAll('.download-controls a[download]').forEach(link => {
