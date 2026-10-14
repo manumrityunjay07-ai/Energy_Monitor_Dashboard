@@ -68,7 +68,6 @@ const UI = {
   anomalyInvestigationList: $('anomaly-investigation-list'),
   collectorHealth:  $('collector-health'),
   collectorLastRun: $('collector-last-run'),
-  recordsCount:     $('records-count'),
   dataFreshness:    $('data-freshness'),
   currentDataStatus:$('current-data-status'),
   hourlyDataDate:   $('hourly-data-date'),
@@ -766,8 +765,6 @@ function renderAnomalyInvestigation(hourlyRows) {
 function renderHealth(stateData, health = {}, dailyTotalRows = []) {
   const lastRun = stateData?.last_run;
   UI.collectorLastRun.textContent = formatISOtoIST(lastRun);
-  const recordCount = dailyTotalRows.length || Object.keys(stateData?.profiles || {}).length;
-  UI.recordsCount.textContent = `${recordCount} days`;
   const ageMinutes = lastRun ? Math.max(0, Math.round((Date.now() - new Date(lastRun).getTime()) / 60000)) : null;
   const healthy = health.collector_status === 'healthy' && lastRun && ageMinutes < 45;
   UI.collectorHealth.textContent = healthy ? 'Healthy' : 'Needs attention';
