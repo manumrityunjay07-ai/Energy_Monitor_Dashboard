@@ -440,21 +440,29 @@ function renderKPI(ai) {
 
   // Saved / Over used (Variance from forecast)
   const errNum = toFloat(rowPredictionError(ai));
+  const errorIcon = document.querySelector('#card-error .kpi-card__icon');
   if (errNum !== null) {
     if (errNum < -0.01) {
+      UI.kpiErrorLabel.textContent = 'Saved';
       UI.kpiError.textContent = fmt(Math.abs(errNum));
       UI.kpiErrorUnit.textContent = 'kWh saved';
       if (UI.kpiErrorHint) UI.kpiErrorHint.textContent = `${fmt(Math.abs(errNum))} kWh below forecast`;
+      if (errorIcon) errorIcon.className = 'kpi-card__icon kpi-card__icon--green';
     } else if (errNum > 0.01) {
+      UI.kpiErrorLabel.textContent = 'Over used';
       UI.kpiError.textContent = fmt(Math.abs(errNum));
       UI.kpiErrorUnit.textContent = 'kWh over';
       if (UI.kpiErrorHint) UI.kpiErrorHint.textContent = `${fmt(Math.abs(errNum))} kWh above forecast`;
+      if (errorIcon) errorIcon.className = 'kpi-card__icon kpi-card__icon--amber';
     } else {
+      UI.kpiErrorLabel.textContent = 'Saved / Over used';
       UI.kpiError.textContent = '0.00';
       UI.kpiErrorUnit.textContent = 'kWh';
       if (UI.kpiErrorHint) UI.kpiErrorHint.textContent = 'Exact match with forecast';
+      if (errorIcon) errorIcon.className = 'kpi-card__icon kpi-card__icon--green';
     }
   } else {
+    UI.kpiErrorLabel.textContent = 'Saved / Over used';
     UI.kpiError.textContent = 'N/A';
     UI.kpiErrorUnit.textContent = '';
     if (UI.kpiErrorHint) UI.kpiErrorHint.textContent = 'Awaiting forecast calculation';
