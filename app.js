@@ -444,13 +444,13 @@ function renderKPI(ai) {
   const errNum = toFloat(rowPredictionError(ai));
   if (errNum !== null) {
     if (errNum < -0.01) {
-      UI.kpiError.textContent = fmt(Math.abs(errNum));
+      UI.kpiError.textContent = `+${fmt(Math.abs(errNum))}`;
       UI.kpiErrorUnit.textContent = 'kWh saved';
       if (UI.kpiErrorHint) UI.kpiErrorHint.textContent = `${fmt(Math.abs(errNum))} kWh below forecast`;
     } else if (errNum > 0.01) {
-      UI.kpiError.textContent = `+${fmt(errNum)}`;
+      UI.kpiError.textContent = `-${fmt(Math.abs(errNum))}`;
       UI.kpiErrorUnit.textContent = 'kWh over';
-      if (UI.kpiErrorHint) UI.kpiErrorHint.textContent = `${fmt(errNum)} kWh above forecast`;
+      if (UI.kpiErrorHint) UI.kpiErrorHint.textContent = `${fmt(Math.abs(errNum))} kWh above forecast`;
     } else {
       UI.kpiError.textContent = '0.00';
       UI.kpiErrorUnit.textContent = 'kWh';
@@ -478,10 +478,19 @@ function renderChart(hourlyRows, context = {}) {
   hourlyRows.forEach(r => {
     const h = parseInt(r.hour, 10);
     if (isNaN(h) || h < 0 || h > 23) return;
+    const pred = toFloat(r.predicted_kwh);
+    const act = toFloat(r.actual_kwh);
+    const rawErr = toFloat(r.error_kwh);
+    let savedOverUsed = null;
+    if (pred !== null && act !== null) {
+      savedOverUsed = Number((pred - act).toFixed(2));
+    } else if (rawErr !== null) {
+      savedOverUsed = Number((-rawErr).toFixed(2));
+    }
     hourMap[h] = {
-      predicted: toFloat(r.predicted_kwh),
-      actual:    toFloat(r.actual_kwh),
-      error:     toFloat(r.error_kwh),
+      predicted: pred,
+      actual:    act,
+      error:     savedOverUsed,
     };
   });
 
@@ -574,6 +583,11 @@ function renderChart(hourlyRows, context = {}) {
           label(ctx) {
             const v = ctx.parsed.y;
             if (v === null || v === undefined) return `${ctx.dataset.label}: N/A`;
+            if (ctx.dataset.label.includes('Saved / Over used')) {
+              if (v > 0.005) return `Saved: +${v.toFixed(2)} kWh`;
+              if (v < -0.005) return `Over used: -${Math.abs(v).toFixed(2)} kWh`;
+              return `Saved / Over used: 0.00 kWh`;
+            }
             return `${ctx.dataset.label}: ${v.toFixed(2)} kWh`;
           },
         },
@@ -665,10 +679,10 @@ function renderTable(hourlyRows, context = {}) {
     if (row.error !== null) {
       if (row.error < -0.005) {
         tdError.classList.add('td-actual');
-        tdError.textContent = `-${Math.abs(row.error).toFixed(2)} (Saved)`;
+        tdError.textContent = `+${Math.abs(row.error).toFixed(2)} (Saved)`;
       } else if (row.error > 0.005) {
         tdError.classList.add('td-error');
-        tdError.textContent = `+${row.error.toFixed(2)} (Over used)`;
+        tdError.textContent = `-${Math.abs(row.error).toFixed(2)} (Over used)`;
       } else {
         tdError.classList.add('td-actual');
         tdError.textContent = '0.00';
