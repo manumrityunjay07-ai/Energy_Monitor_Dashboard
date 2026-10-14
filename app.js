@@ -70,7 +70,6 @@ const UI = {
   collectorLastRun: $('collector-last-run'),
   recordsCount:     $('records-count'),
   dataFreshness:    $('data-freshness'),
-  apiLatency:       $('api-latency'),
   currentDataStatus:$('current-data-status'),
   hourlyDataDate:   $('hourly-data-date'),
   hourlyChartSummary:$('hourly-chart-summary'),
@@ -774,8 +773,6 @@ function renderHealth(stateData, health = {}, dailyTotalRows = []) {
   UI.collectorHealth.textContent = healthy ? 'Healthy' : 'Needs attention';
   UI.collectorHealth.className = healthy ? 'health-good' : 'health-warn';
   UI.dataFreshness.textContent = ageMinutes === null ? 'Unknown' : `${ageMinutes} min ago`;
-  const latency = health.api_latency_ms || {};
-  UI.apiLatency.textContent = latency.hourly ? `${latency.hourly} ms` : '—';
   const qualityStatus = health.data_quality?.data_status || health.data_quality?.status || 'unknown';
   const completedHours = health.data_quality?.completed_hours;
   UI.currentDataStatus.textContent = completedHours != null ? `${qualityStatus} · ${completedHours} completed hours` : qualityStatus;

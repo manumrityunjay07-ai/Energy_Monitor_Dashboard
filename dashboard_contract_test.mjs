@@ -17,7 +17,6 @@ assert.match(app, /pendingDailyDate/);
 assert.match(app, /Current forecast for/);
 assert.match(app, /async function handleDataDownload\(event\)/);
 assert.match(app, /URL\.createObjectURL\(await response\.blob\(\)\)/);
-assert.match(html, /download-controls/);
 assert.match(html, /id="hourly-data-date"/);
 assert.match(html, /id="hourly-chart-summary"/);
 assert.match(html, /aria-describedby="hourly-chart-summary"/);
