@@ -442,11 +442,11 @@ function renderKPI(ai) {
   const errNum = toFloat(rowPredictionError(ai));
   if (errNum !== null) {
     if (errNum < -0.01) {
-      UI.kpiError.textContent = `+${fmt(Math.abs(errNum))}`;
+      UI.kpiError.textContent = fmt(Math.abs(errNum));
       UI.kpiErrorUnit.textContent = 'kWh saved';
       if (UI.kpiErrorHint) UI.kpiErrorHint.textContent = `${fmt(Math.abs(errNum))} kWh below forecast`;
     } else if (errNum > 0.01) {
-      UI.kpiError.textContent = `-${fmt(Math.abs(errNum))}`;
+      UI.kpiError.textContent = fmt(Math.abs(errNum));
       UI.kpiErrorUnit.textContent = 'kWh over';
       if (UI.kpiErrorHint) UI.kpiErrorHint.textContent = `${fmt(Math.abs(errNum))} kWh above forecast`;
     } else {
@@ -582,8 +582,8 @@ function renderChart(hourlyRows, context = {}) {
             const v = ctx.parsed.y;
             if (v === null || v === undefined) return `${ctx.dataset.label}: N/A`;
             if (ctx.dataset.label.includes('Saved / Over used')) {
-              if (v > 0.005) return `Saved: +${v.toFixed(2)} kWh`;
-              if (v < -0.005) return `Over used: -${Math.abs(v).toFixed(2)} kWh`;
+              if (v > 0.005) return `Saved: ${v.toFixed(2)} kWh`;
+              if (v < -0.005) return `Over used: ${Math.abs(v).toFixed(2)} kWh`;
               return `Saved / Over used: 0.00 kWh`;
             }
             return `${ctx.dataset.label}: ${v.toFixed(2)} kWh`;
@@ -673,23 +673,56 @@ function renderTable(hourlyRows, context = {}) {
     tdActual.textContent = row.actual !== null ? row.actual.toFixed(2) : '—';
     tr.appendChild(tdActual);
 
-    const tdError = document.createElement('td');
-    if (row.error !== null) {
-      if (row.error < -0.005) {
-        tdError.classList.add('td-actual');
-        tdError.textContent = `+${Math.abs(row.error).toFixed(2)} (Saved)`;
-      } else if (row.error > 0.005) {
-        tdError.classList.add('td-error');
-        tdError.textContent = `-${Math.abs(row.error).toFixed(2)} (Over used)`;
+    const tdSaved = document.createElement('td');
+    const tdOver  = document.createElement('td');
+
+    const pred = row.predicted;
+    const act  = row.actual;
+
+    if (act !== null && pred !== null) {
+      const diff = act - pred;
+      if (diff < -0.005) {
+        tdSaved.classList.add('td-actual');
+        tdSaved.textContent = Math.abs(diff).toFixed(2);
+        tdOver.classList.add('td-na');
+        tdOver.textContent = '—';
+      } else if (diff > 0.005) {
+        tdSaved.classList.add('td-na');
+        tdSaved.textContent = '—';
+        tdOver.classList.add('td-error');
+        tdOver.textContent = diff.toFixed(2);
       } else {
-        tdError.classList.add('td-actual');
-        tdError.textContent = '0.00';
+        tdSaved.classList.add('td-actual');
+        tdSaved.textContent = '0.00';
+        tdOver.classList.add('td-na');
+        tdOver.textContent = '—';
+      }
+    } else if (row.error !== null) {
+      if (row.error < -0.005) {
+        tdSaved.classList.add('td-actual');
+        tdSaved.textContent = Math.abs(row.error).toFixed(2);
+        tdOver.classList.add('td-na');
+        tdOver.textContent = '—';
+      } else if (row.error > 0.005) {
+        tdSaved.classList.add('td-na');
+        tdSaved.textContent = '—';
+        tdOver.classList.add('td-error');
+        tdOver.textContent = Math.abs(row.error).toFixed(2);
+      } else {
+        tdSaved.classList.add('td-actual');
+        tdSaved.textContent = '0.00';
+        tdOver.classList.add('td-na');
+        tdOver.textContent = '—';
       }
     } else {
-      tdError.classList.add('td-na');
-      tdError.textContent = '—';
+      tdSaved.classList.add('td-na');
+      tdSaved.textContent = '—';
+      tdOver.classList.add('td-na');
+      tdOver.textContent = '—';
     }
-    tr.appendChild(tdError);
+
+    tr.appendChild(tdSaved);
+    tr.appendChild(tdOver);
 
     tbody.appendChild(tr);
   }
